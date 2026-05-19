@@ -173,6 +173,18 @@
     });
   }
 
+
+  // Delegate: any <a href="#contact"> opens the contact modal (replaces legacy Zendesk request form links)
+  document.addEventListener('click', function (e) {
+    var a = e.target && e.target.closest ? e.target.closest('a[href$="#contact"]') : null;
+    if (!a) return;
+    var href = a.getAttribute('href') || '';
+    if (href !== '#contact' && !/#contact$/.test(href)) return;
+    e.preventDefault();
+    var btn = document.getElementById('zd-btn');
+    if (btn) btn.click();
+  });
+
   if (document.body) addUI();
   setTimeout(addUI, 100);
   setTimeout(addUI, 600);
