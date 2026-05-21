@@ -1,19 +1,5 @@
 // Zendesk Contact Form Modal - Comdesk Help
 (function () {
-  // Auto-open Mintlify Assistant chat on first visit per session
-  (function autoOpenAssistant() {
-    try {
-      if (sessionStorage.getItem('comdesk-assistant-auto-open')) return;
-      sessionStorage.setItem('comdesk-assistant-auto-open', '1');
-      var p = new URLSearchParams(window.location.search);
-      if (p.has('assistant')) return; // already triggered via URL
-      p.set('assistant', 'open');
-      var newUrl = window.location.pathname + '?' + p.toString() + window.location.hash;
-      // Use location.replace so Mintlify SSR/initial render picks up the param
-      window.location.replace(newUrl);
-    } catch (e) { /* sessionStorage may be unavailable; fail silently */ }
-  })();
-
   var style = document.createElement('style');
   style.textContent = [
     '#zd-btn{position:fixed;bottom:24px;right:24px;z-index:9998;background:#00BCD4;color:#fff;border:none;border-radius:24px;padding:12px 20px;font-size:14px;font-weight:600;font-family:system-ui,sans-serif;cursor:pointer;box-shadow:0 4px 14px rgba(0,188,212,.4);display:flex;align-items:center;gap:8px;transition:background .2s,transform .15s}',
