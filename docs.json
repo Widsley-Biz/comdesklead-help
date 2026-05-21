@@ -6,19 +6,10 @@
   "colors": {
     "primary": "#00BCD4",
     "light": "#4DD0E1",
-    "dark": "#00838F",
-    "background": {
-      "light": {
-        "from": "#FFFFFF",
-        "to": "#E0F7FA"
-      },
-      "dark": {
-        "from": "#0A0D0D",
-        "to": "#00363D"
-      }
-    }
+    "dark": "#00838F"
   },
   "fonts": {
+    "family": "Noto Sans JP",
     "heading": {
       "family": "Noto Sans JP",
       "weight": 700
@@ -29,7 +20,11 @@
     }
   },
   "background": {
-    "decoration": "gradient"
+    "decoration": "gradient",
+    "color": {
+      "light": "#F7FDFF",
+      "dark": "#0A0D0D"
+    }
   },
   "styling": {
     "eyebrows": "section",
