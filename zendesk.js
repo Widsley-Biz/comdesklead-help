@@ -24,6 +24,10 @@
     '#zd-sent h3{margin:0 0 8px;font-size:18px;color:#111}',
     '#zd-sent p{margin:0;color:#666;font-size:14px}',
     '#zd-error{display:none;background:#fff3f3;border:1px solid #ffcdd2;border-radius:8px;padding:10px 14px;margin-top:12px;font-size:13px;color:#c62828}',
+    "div[id*='assistant-bar'],div[class*='assistant-bar'],div[class*='AssistantBar'],div[data-component*='assistant']{bottom:24px!important;box-shadow:0 8px 24px rgba(0,0,0,.18),0 2px 6px rgba(0,0,0,.08)!important;border-radius:14px!important}",
+    "button[aria-label*='Ask AI' i],button[title*='Ask AI' i]{box-shadow:0 4px 14px rgba(0,188,212,.35)!important}",
+    '.mintlify-assistant-bar,.mintlify-assistant,.assistant-bar{position:fixed!important;bottom:24px!important;left:50%!important;transform:translateX(-50%)!important;box-shadow:0 10px 28px rgba(0,0,0,.18),0 2px 6px rgba(0,0,0,.08)!important;border-radius:16px!important;background:#fff!important;border:1px solid #e6f6f9!important;z-index:9990!important;transition:box-shadow .2s,transform .15s}',
+    '.mintlify-assistant-bar:hover,.mintlify-assistant:hover,.assistant-bar:hover{box-shadow:0 12px 32px rgba(0,188,212,.25),0 3px 8px rgba(0,0,0,.08)!important;transform:translateX(-50%) translateY(-2px)!important}'
   ].join('');
   document.head.appendChild(style);
 
