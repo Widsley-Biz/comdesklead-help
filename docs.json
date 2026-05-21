@@ -20,7 +20,6 @@
     }
   },
   "background": {
-    "decoration": "gradient",
     "color": {
       "light": "#FFFFFF",
       "dark": "#0A0D0D"
