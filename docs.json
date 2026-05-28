@@ -2,32 +2,9 @@
   "$schema": "https://mintlify.com/schema.json",
   "name": "Comdesk ヘルプ",
   "locale": "ja",
-  "theme": "maple",
+  "theme": "mint",
   "colors": {
-    "primary": "#00BCD4",
-    "light": "#4DD0E1",
-    "dark": "#00838F"
-  },
-  "fonts": {
-    "family": "Noto Sans JP",
-    "heading": {
-      "family": "Noto Sans JP",
-      "weight": 700
-    },
-    "body": {
-      "family": "Noto Sans JP",
-      "weight": 400
-    }
-  },
-  "background": {
-    "color": {
-      "light": "#FFFFFF",
-      "dark": "#0A0D0D"
-    }
-  },
-  "styling": {
-    "eyebrows": "section",
-    "codeblocks": "system"
+    "primary": "#00BCD4"
   },
   "logo": {
     "light": "/logo.png",
