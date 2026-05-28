@@ -22,6 +22,7 @@
       {
         "group": "はじめてガイド",
         "pages": [
+          "guide/index",
           {
             "group": "ユーザーガイド",
             "pages": [
@@ -84,6 +85,7 @@
       {
         "group": "機能一覧",
         "pages": [
+          "features/index",
           {
             "group": "基本ガイド",
             "pages": [
@@ -169,6 +171,7 @@
       {
         "group": "トラブルシューティング",
         "pages": [
+          "troubleshoot/index",
           {
             "group": "エラー",
             "pages": [
@@ -208,6 +211,7 @@
       {
         "group": "ハードウェアについて",
         "pages": [
+          "hardware/index",
           {
             "group": "貸出端末について",
             "pages": [
@@ -236,6 +240,7 @@
       {
         "group": "リリースノート・お知らせ",
         "pages": [
+          "release/index",
           {
             "group": "リリースノート",
             "pages": [
@@ -340,6 +345,7 @@
       {
         "group": "製品・プランについて",
         "pages": [
+          "plan/index",
           {
             "group": "ご契約について",
             "pages": [
