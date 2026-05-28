@@ -138,6 +138,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           request: {
+            brand_id: 12566890609049, // Comdesk Lead Support
             ticket_form_id: 900000059466,
             subject: subject,
             comment: { body: body },
