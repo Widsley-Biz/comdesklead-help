@@ -12,357 +12,377 @@
   },
   "favicon": "/favicon.ico",
   "navigation": {
-    "groups": [
+    "tabs": [
       {
-        "group": "ホーム",
-        "pages": [
-          "index"
-        ]
-      },
-      {
-        "group": "はじめてガイド",
-        "pages": [
-          "guide/index",
+        "tab": "ユーザーヘルプ",
+        "groups": [
           {
-            "group": "ユーザーガイド",
+            "group": "ホーム",
             "pages": [
-              "guide/user/12735918031513",
-              "guide/user/12744354427033",
-              "guide/user/12745769763609",
-              "guide/user/12750140603545",
-              "guide/user/12750855872025",
-              "guide/user/12751011749529",
-              "guide/user/12753517305753",
-              "guide/user/12773908516505",
-              "guide/user/12815344287769",
-              "guide/user/13293513317401",
-              "guide/user/13356116024601",
-              "guide/user/13356462685337",
-              "guide/user/13556859672217",
-              "guide/user/13557435667993",
-              "guide/user/32814562359449"
+              "index"
             ]
           },
           {
-            "group": "推奨環境ガイド",
+            "group": "はじめてガイド",
             "pages": [
-              "guide/env/13177022553241",
-              "guide/env/14826252461721",
-              "guide/env/18406808922649",
-              "guide/env/23954722459545"
+              "guide/index",
+              {
+                "group": "ユーザーガイド",
+                "pages": [
+                  "guide/user/12735918031513",
+                  "guide/user/12744354427033",
+                  "guide/user/12745769763609",
+                  "guide/user/12750140603545",
+                  "guide/user/12750855872025",
+                  "guide/user/12751011749529",
+                  "guide/user/12753517305753",
+                  "guide/user/12773908516505",
+                  "guide/user/12815344287769",
+                  "guide/user/13293513317401",
+                  "guide/user/13356116024601",
+                  "guide/user/13356462685337",
+                  "guide/user/13556859672217",
+                  "guide/user/13557435667993",
+                  "guide/user/32814562359449"
+                ]
+              },
+              {
+                "group": "推奨環境ガイド",
+                "pages": [
+                  "guide/env/13177022553241",
+                  "guide/env/14826252461721",
+                  "guide/env/18406808922649",
+                  "guide/env/23954722459545"
+                ]
+              },
+              {
+                "group": "管理者ガイド",
+                "pages": [
+                  "guide/admin/12736179273497",
+                  "guide/admin/12738156781721",
+                  "guide/admin/12740334296345",
+                  "guide/admin/12741114939545",
+                  "guide/admin/12743928066585",
+                  "guide/admin/12754662466073",
+                  "guide/admin/12755256165145",
+                  "guide/admin/12758876873241",
+                  "guide/admin/12772717065753",
+                  "guide/admin/12777882592153",
+                  "guide/admin/12814709914777",
+                  "guide/admin/12907898836249",
+                  "guide/admin/13356730125337",
+                  "guide/admin/13357181138201",
+                  "guide/admin/13357753043097",
+                  "guide/admin/13896301861017",
+                  "guide/admin/14776227377433",
+                  "guide/admin/14779799780249",
+                  "guide/admin/14972981317785",
+                  "guide/admin/16562691982617",
+                  "guide/admin/17383778302105",
+                  "guide/admin/20057981460761",
+                  "guide/admin/21610979714073"
+                ]
+              }
             ]
           },
           {
-            "group": "管理者ガイド",
+            "group": "機能一覧",
             "pages": [
-              "guide/admin/12736179273497",
-              "guide/admin/12738156781721",
-              "guide/admin/12740334296345",
-              "guide/admin/12741114939545",
-              "guide/admin/12743928066585",
-              "guide/admin/12754662466073",
-              "guide/admin/12755256165145",
-              "guide/admin/12758876873241",
-              "guide/admin/12772717065753",
-              "guide/admin/12777882592153",
-              "guide/admin/12814709914777",
-              "guide/admin/12907898836249",
-              "guide/admin/13356730125337",
-              "guide/admin/13357181138201",
-              "guide/admin/13357753043097",
-              "guide/admin/13896301861017",
-              "guide/admin/14776227377433",
-              "guide/admin/14779799780249",
-              "guide/admin/14972981317785",
-              "guide/admin/16562691982617",
-              "guide/admin/17383778302105",
-              "guide/admin/20057981460761",
-              "guide/admin/21610979714073"
+              "features/index",
+              {
+                "group": "基本ガイド",
+                "pages": [
+                  "features/basic/12750509438233",
+                  "features/basic/12752074297497",
+                  "features/basic/13378846043161",
+                  "features/basic/13537810091033",
+                  "features/basic/13538915677209",
+                  "features/basic/13571479765529",
+                  "features/basic/13703755500697",
+                  "features/basic/13703831936537",
+                  "features/basic/13704005152665",
+                  "features/basic/13940816117785",
+                  "features/basic/14500396520729",
+                  "features/basic/14501355033241",
+                  "features/basic/14501428133145",
+                  "features/basic/14501557173529",
+                  "features/basic/14501673318681",
+                  "features/basic/14661328574105",
+                  "features/basic/14698240513049",
+                  "features/basic/31336370476825"
+                ]
+              },
+              {
+                "group": "活用ガイド",
+                "pages": [
+                  "features/advanced/12774269711129",
+                  "features/advanced/12775436693273",
+                  "features/advanced/12776069385113",
+                  "features/advanced/12777051460249",
+                  "features/advanced/12777071015833",
+                  "features/advanced/12778734555545",
+                  "features/advanced/12780022937753",
+                  "features/advanced/12780399157657",
+                  "features/advanced/12787126154649",
+                  "features/advanced/12787129797529",
+                  "features/advanced/12788722729625",
+                  "features/advanced/12789002610329",
+                  "features/advanced/12789493399193",
+                  "features/advanced/12790321037081",
+                  "features/advanced/12790339370521",
+                  "features/advanced/12819542587929",
+                  "features/advanced/12822412835481",
+                  "features/advanced/12876176090905",
+                  "features/advanced/12881790560281",
+                  "features/advanced/12882387147161",
+                  "features/advanced/13449936049305",
+                  "features/advanced/13456364301465",
+                  "features/advanced/13486825686681",
+                  "features/advanced/13592765186841",
+                  "features/advanced/13592844626329",
+                  "features/advanced/13593294000153",
+                  "features/advanced/13593393817881",
+                  "features/advanced/13593474385817",
+                  "features/advanced/13598452522009",
+                  "features/advanced/13778980866329",
+                  "features/advanced/13902826185113",
+                  "features/advanced/13931672300825",
+                  "features/advanced/14430869382809",
+                  "features/advanced/14502240732825",
+                  "features/advanced/14508506030489",
+                  "features/advanced/14508544705177",
+                  "features/advanced/14508548645657",
+                  "features/advanced/14511279774745",
+                  "features/advanced/14511290248601",
+                  "features/advanced/14511324902169",
+                  "features/advanced/14511326811033",
+                  "features/advanced/14939716072345",
+                  "features/advanced/16037534896921",
+                  "features/advanced/18606023446937",
+                  "features/advanced/21626725259545",
+                  "features/advanced/23421626752665",
+                  "features/advanced/28724742098969",
+                  "features/advanced/30384685631897",
+                  "features/advanced/31661378212633",
+                  "features/advanced/31681875230617",
+                  "features/advanced/33006613337369",
+                  "features/advanced/56333140546585"
+                ]
+              }
+            ]
+          },
+          {
+            "group": "トラブルシューティング",
+            "pages": [
+              "troubleshoot/index",
+              {
+                "group": "エラー",
+                "pages": [
+                  "troubleshoot/error/12714594027801",
+                  "troubleshoot/error/12746234437529",
+                  "troubleshoot/error/12752349997465",
+                  "troubleshoot/error/12753378290841",
+                  "troubleshoot/error/12759146997145",
+                  "troubleshoot/error/12884976793369",
+                  "troubleshoot/error/13247426326681",
+                  "troubleshoot/error/13251456522905",
+                  "troubleshoot/error/13317591236889",
+                  "troubleshoot/error/13420921169561",
+                  "troubleshoot/error/14497070753945",
+                  "troubleshoot/error/14868042438809",
+                  "troubleshoot/error/14873284280729",
+                  "troubleshoot/error/14937971613337",
+                  "troubleshoot/error/15131156225689",
+                  "troubleshoot/error/15324719452441",
+                  "troubleshoot/error/24655117919001",
+                  "troubleshoot/error/24656417938329",
+                  "troubleshoot/error/40012167463961",
+                  "troubleshoot/error/42611012166681"
+                ]
+              },
+              {
+                "group": "サポートへのお問い合わせ",
+                "pages": [
+                  "troubleshoot/support/12828937533081",
+                  "troubleshoot/support/12927370479257",
+                  "troubleshoot/support/12941407647001",
+                  "troubleshoot/support/14909482856473"
+                ]
+              }
+            ]
+          },
+          {
+            "group": "ハードウェアについて",
+            "pages": [
+              "hardware/index",
+              {
+                "group": "貸出端末について",
+                "pages": [
+                  "hardware/device/12781943797273",
+                  "hardware/device/12783772852121",
+                  "hardware/device/12783813577113",
+                  "hardware/device/12785391736345",
+                  "hardware/device/14912837687321",
+                  "hardware/device/24496226652313",
+                  "hardware/device/24532190641305"
+                ]
+              },
+              {
+                "group": "各種ご依頼",
+                "pages": [
+                  "hardware/request/12716432501017",
+                  "hardware/request/12716442994713",
+                  "hardware/request/12716488998169",
+                  "hardware/request/12716510369177",
+                  "hardware/request/12824269643033",
+                  "hardware/request/12825710609945"
+                ]
+              }
+            ]
+          },
+          {
+            "group": "リリースノート・お知らせ",
+            "pages": [
+              "release/index",
+              {
+                "group": "リリースノート",
+                "pages": [
+                  "release/notes/13454139881241",
+                  "release/notes/13496405950745",
+                  "release/notes/13699720794649",
+                  "release/notes/13919132554777",
+                  "release/notes/14416345154329",
+                  "release/notes/14503294795801",
+                  "release/notes/14622648023321",
+                  "release/notes/14651836476441",
+                  "release/notes/14838463217177",
+                  "release/notes/15560134507673",
+                  "release/notes/16035271268761",
+                  "release/notes/16544998880409",
+                  "release/notes/16974083199129",
+                  "release/notes/18675432797081",
+                  "release/notes/19560768522777",
+                  "release/notes/20547752673305",
+                  "release/notes/21121321355161",
+                  "release/notes/21625711557145",
+                  "release/notes/22128749441561",
+                  "release/notes/23162987940249",
+                  "release/notes/28763306275225",
+                  "release/notes/29474705876121",
+                  "release/notes/30758050186265",
+                  "release/notes/31721725350809",
+                  "release/notes/31874917078425",
+                  "release/notes/33042591864729",
+                  "release/notes/33129219199257",
+                  "release/notes/33185867607833",
+                  "release/notes/33212103790617",
+                  "release/notes/33250710172825",
+                  "release/notes/33287196890265",
+                  "release/notes/33340285616153",
+                  "release/notes/33340552647705",
+                  "release/notes/33364519170713",
+                  "release/notes/33940082136345",
+                  "release/notes/34910767216281",
+                  "release/notes/36760437417753",
+                  "release/notes/36962458486041",
+                  "release/notes/38137222496153",
+                  "release/notes/38390908657177",
+                  "release/notes/38629239840025",
+                  "release/notes/38900565742873",
+                  "release/notes/39173245057305",
+                  "release/notes/39437396716185",
+                  "release/notes/39961130960025",
+                  "release/notes/40232076789913",
+                  "release/notes/40487104858393",
+                  "release/notes/41046467340441",
+                  "release/notes/42146778161817",
+                  "release/notes/42434984568729",
+                  "release/notes/42654484120217",
+                  "release/notes/42890512182681",
+                  "release/notes/43684562628761",
+                  "release/notes/44431266048409",
+                  "release/notes/44473536430489",
+                  "release/notes/45551152132377",
+                  "release/notes/46102764369305",
+                  "release/notes/46911135432345",
+                  "release/notes/47667438577049",
+                  "release/notes/48080063642649",
+                  "release/notes/48495694028569",
+                  "release/notes/48928851305881",
+                  "release/notes/49346974365337",
+                  "release/notes/49957316371993",
+                  "release/notes/50097485984793",
+                  "release/notes/50574675322521",
+                  "release/notes/51143571134873",
+                  "release/notes/52171834479641",
+                  "release/notes/52242948038553",
+                  "release/notes/52583739639705",
+                  "release/notes/52584143943577",
+                  "release/notes/53001339522073",
+                  "release/notes/53439492062617",
+                  "release/notes/54234723160729",
+                  "release/notes/54420246651033",
+                  "release/notes/54798747388569",
+                  "release/notes/55302345283865",
+                  "release/notes/55684932797849",
+                  "release/notes/56339041242521"
+                ]
+              },
+              {
+                "group": "Widsley News",
+                "pages": [
+                  "release/news/13291087887001",
+                  "release/news/25038627282969",
+                  "release/news/41028124522649",
+                  "release/news/41282561428761",
+                  "release/news/42183815551769",
+                  "release/news/44994785538713",
+                  "release/news/49777910691609",
+                  "release/news/53393514630169"
+                ]
+              }
+            ]
+          },
+          {
+            "group": "製品・プランについて",
+            "pages": [
+              "plan/index",
+              {
+                "group": "ご契約について",
+                "pages": [
+                  "plan/contract/13599353160089",
+                  "plan/contract/14499858965529",
+                  "plan/contract/14499993910425",
+                  "plan/contract/14613903837209",
+                  "plan/contract/14614549439897",
+                  "plan/contract/14614863335833",
+                  "plan/contract/14656797845145",
+                  "plan/contract/14661490212761",
+                  "plan/contract/14725147995801",
+                  "plan/contract/14725260004633",
+                  "plan/contract/14727329027865",
+                  "plan/contract/14874003961881",
+                  "plan/contract/14943281306009",
+                  "plan/contract/15078375756825"
+                ]
+              }
             ]
           }
         ]
       },
       {
-        "group": "機能一覧",
-        "pages": [
-          "features/index",
+        "tab": "Developer",
+        "groups": [
           {
-            "group": "基本ガイド",
+            "group": "Developer",
             "pages": [
-              "features/basic/12750509438233",
-              "features/basic/12752074297497",
-              "features/basic/13378846043161",
-              "features/basic/13537810091033",
-              "features/basic/13538915677209",
-              "features/basic/13571479765529",
-              "features/basic/13703755500697",
-              "features/basic/13703831936537",
-              "features/basic/13704005152665",
-              "features/basic/13940816117785",
-              "features/basic/14500396520729",
-              "features/basic/14501355033241",
-              "features/basic/14501428133145",
-              "features/basic/14501557173529",
-              "features/basic/14501673318681",
-              "features/basic/14661328574105",
-              "features/basic/14698240513049",
-              "features/basic/31336370476825"
+              "developer/overview"
             ]
           },
           {
-            "group": "活用ガイド",
+            "group": "API リファレンス",
             "pages": [
-              "features/advanced/12774269711129",
-              "features/advanced/12775436693273",
-              "features/advanced/12776069385113",
-              "features/advanced/12777051460249",
-              "features/advanced/12777071015833",
-              "features/advanced/12778734555545",
-              "features/advanced/12780022937753",
-              "features/advanced/12780399157657",
-              "features/advanced/12787126154649",
-              "features/advanced/12787129797529",
-              "features/advanced/12788722729625",
-              "features/advanced/12789002610329",
-              "features/advanced/12789493399193",
-              "features/advanced/12790321037081",
-              "features/advanced/12790339370521",
-              "features/advanced/12819542587929",
-              "features/advanced/12822412835481",
-              "features/advanced/12876176090905",
-              "features/advanced/12881790560281",
-              "features/advanced/12882387147161",
-              "features/advanced/13449936049305",
-              "features/advanced/13456364301465",
-              "features/advanced/13486825686681",
-              "features/advanced/13592765186841",
-              "features/advanced/13592844626329",
-              "features/advanced/13593294000153",
-              "features/advanced/13593393817881",
-              "features/advanced/13593474385817",
-              "features/advanced/13598452522009",
-              "features/advanced/13778980866329",
-              "features/advanced/13902826185113",
-              "features/advanced/13931672300825",
-              "features/advanced/14430869382809",
-              "features/advanced/14502240732825",
-              "features/advanced/14508506030489",
-              "features/advanced/14508544705177",
-              "features/advanced/14508548645657",
-              "features/advanced/14511279774745",
-              "features/advanced/14511290248601",
-              "features/advanced/14511324902169",
-              "features/advanced/14511326811033",
-              "features/advanced/14939716072345",
-              "features/advanced/16037534896921",
-              "features/advanced/18606023446937",
-              "features/advanced/21626725259545",
-              "features/advanced/23421626752665",
-              "features/advanced/28724742098969",
-              "features/advanced/30384685631897",
-              "features/advanced/31661378212633",
-              "features/advanced/31681875230617",
-              "features/advanced/33006613337369",
-              "features/advanced/56333140546585"
-            ]
-          }
-        ]
-      },
-      {
-        "group": "トラブルシューティング",
-        "pages": [
-          "troubleshoot/index",
-          {
-            "group": "エラー",
-            "pages": [
-              "troubleshoot/error/12714594027801",
-              "troubleshoot/error/12746234437529",
-              "troubleshoot/error/12752349997465",
-              "troubleshoot/error/12753378290841",
-              "troubleshoot/error/12759146997145",
-              "troubleshoot/error/12884976793369",
-              "troubleshoot/error/13247426326681",
-              "troubleshoot/error/13251456522905",
-              "troubleshoot/error/13317591236889",
-              "troubleshoot/error/13420921169561",
-              "troubleshoot/error/14497070753945",
-              "troubleshoot/error/14868042438809",
-              "troubleshoot/error/14873284280729",
-              "troubleshoot/error/14937971613337",
-              "troubleshoot/error/15131156225689",
-              "troubleshoot/error/15324719452441",
-              "troubleshoot/error/24655117919001",
-              "troubleshoot/error/24656417938329",
-              "troubleshoot/error/40012167463961",
-              "troubleshoot/error/42611012166681"
-            ]
-          },
-          {
-            "group": "サポートへのお問い合わせ",
-            "pages": [
-              "troubleshoot/support/12828937533081",
-              "troubleshoot/support/12927370479257",
-              "troubleshoot/support/12941407647001",
-              "troubleshoot/support/14909482856473"
-            ]
-          }
-        ]
-      },
-      {
-        "group": "ハードウェアについて",
-        "pages": [
-          "hardware/index",
-          {
-            "group": "貸出端末について",
-            "pages": [
-              "hardware/device/12781943797273",
-              "hardware/device/12783772852121",
-              "hardware/device/12783813577113",
-              "hardware/device/12785391736345",
-              "hardware/device/14912837687321",
-              "hardware/device/24496226652313",
-              "hardware/device/24532190641305"
-            ]
-          },
-          {
-            "group": "各種ご依頼",
-            "pages": [
-              "hardware/request/12716432501017",
-              "hardware/request/12716442994713",
-              "hardware/request/12716488998169",
-              "hardware/request/12716510369177",
-              "hardware/request/12824269643033",
-              "hardware/request/12825710609945"
-            ]
-          }
-        ]
-      },
-      {
-        "group": "リリースノート・お知らせ",
-        "pages": [
-          "release/index",
-          {
-            "group": "リリースノート",
-            "pages": [
-              "release/notes/13454139881241",
-              "release/notes/13496405950745",
-              "release/notes/13699720794649",
-              "release/notes/13919132554777",
-              "release/notes/14416345154329",
-              "release/notes/14503294795801",
-              "release/notes/14622648023321",
-              "release/notes/14651836476441",
-              "release/notes/14838463217177",
-              "release/notes/14877612881177",
-              "release/notes/15560134507673",
-              "release/notes/16035271268761",
-              "release/notes/16544998880409",
-              "release/notes/16974083199129",
-              "release/notes/18675432797081",
-              "release/notes/19560768522777",
-              "release/notes/20547752673305",
-              "release/notes/21121321355161",
-              "release/notes/21625711557145",
-              "release/notes/22128749441561",
-              "release/notes/23162987940249",
-              "release/notes/28763306275225",
-              "release/notes/29474705876121",
-              "release/notes/30758050186265",
-              "release/notes/31721725350809",
-              "release/notes/31874917078425",
-              "release/notes/33042591864729",
-              "release/notes/33129219199257",
-              "release/notes/33185867607833",
-              "release/notes/33212103790617",
-              "release/notes/33250710172825",
-              "release/notes/33287196890265",
-              "release/notes/33340285616153",
-              "release/notes/33340552647705",
-              "release/notes/33364519170713",
-              "release/notes/33940082136345",
-              "release/notes/34910767216281",
-              "release/notes/36760437417753",
-              "release/notes/36962458486041",
-              "release/notes/38137222496153",
-              "release/notes/38390908657177",
-              "release/notes/38629239840025",
-              "release/notes/38900565742873",
-              "release/notes/39173245057305",
-              "release/notes/39437396716185",
-              "release/notes/39961130960025",
-              "release/notes/40232076789913",
-              "release/notes/40487104858393",
-              "release/notes/41046467340441",
-              "release/notes/42146778161817",
-              "release/notes/42434984568729",
-              "release/notes/42654484120217",
-              "release/notes/42890512182681",
-              "release/notes/43684562628761",
-              "release/notes/44431266048409",
-              "release/notes/44473536430489",
-              "release/notes/45551152132377",
-              "release/notes/46102764369305",
-              "release/notes/46911135432345",
-              "release/notes/47667438577049",
-              "release/notes/48080063642649",
-              "release/notes/48495694028569",
-              "release/notes/48928851305881",
-              "release/notes/49346974365337",
-              "release/notes/49957316371993",
-              "release/notes/50097485984793",
-              "release/notes/50574675322521",
-              "release/notes/51143571134873",
-              "release/notes/52171834479641",
-              "release/notes/52242948038553",
-              "release/notes/52583739639705",
-              "release/notes/52584143943577",
-              "release/notes/53001339522073",
-              "release/notes/53439492062617",
-              "release/notes/54234723160729",
-              "release/notes/54420246651033",
-              "release/notes/54798747388569",
-              "release/notes/55302345283865",
-              "release/notes/55684932797849",
-              "release/notes/56339041242521"
-            ]
-          },
-          {
-            "group": "Widsley News",
-            "pages": [
-              "release/news/13214750790425",
-              "release/news/13291087887001",
-              "release/news/25038627282969",
-              "release/news/41028124522649",
-              "release/news/41282561428761",
-              "release/news/42183815551769",
-              "release/news/44994785538713",
-              "release/news/49777910691609",
-              "release/news/53393514630169"
-            ]
-          }
-        ]
-      },
-      {
-        "group": "製品・プランについて",
-        "pages": [
-          "plan/index",
-          {
-            "group": "ご契約について",
-            "pages": [
-              "plan/contract/13599353160089",
-              "plan/contract/14499858965529",
-              "plan/contract/14499993910425",
-              "plan/contract/14613903837209",
-              "plan/contract/14614549439897",
-              "plan/contract/14614863335833",
-              "plan/contract/14656797845145",
-              "plan/contract/14661490212761",
-              "plan/contract/14725147995801",
-              "plan/contract/14725260004633",
-              "plan/contract/14727329027865",
-              "plan/contract/14874003961881",
-              "plan/contract/14943281306009",
-              "plan/contract/15078375756825"
+              "developer/api/overview"
             ]
           }
         ]
