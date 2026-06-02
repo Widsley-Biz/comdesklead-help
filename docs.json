@@ -384,6 +384,10 @@
             "pages": [
               "developer/api/overview"
             ]
+          },
+          {
+            "group": "Open API",
+            "pages": []
           }
         ]
       }

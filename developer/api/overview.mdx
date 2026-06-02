@@ -1,3 +1,139 @@
 ---
-title: "overview"
+title: "Webhook概要"
 ---
+
+# 概要
+
+---
+
+貴社のシステムにComdesk Leadから活動履歴のデータをWebhook機能を用いて連携。
+
+管理権限ユーザーでWebhook連携先をご登録後、データ連携が開始。
+
+### ※Webhookご利用のお申込みが別途必要となります。
+
+### 運用開始までの流れ
+
+- 貴社にてデータを受けるAPIの開発
+- 当社側でComdesk-IDで該当テナントのwebhook連携を有効にする
+- 貴社側のシステム管理者権限ユーザーが、webhookの設定を登録
+  - webhook名称 (任意)
+  - webhookのエンドポイントURL
+  - webhookのAPIキー
+  - 接続テストの実施
+- 接続テストが正常に完了すれば、データ連携の準備が整い 連携対象のイベントが実施されたら、データ連携が行われる
+
+# 仕様
+
+---
+
+## webhook設定登録時の接続テスト
+
+- エンドポイントURL、APIキーを登録
+- 接続に成功した場合のみ、Webhook設定を登録完了
+  - ※接続時に、タイムアウト制限の30秒に達した場合は失敗と判定
+
+## Webhook連携のイベント
+
+以下、7種類
+
+1. 通話開始 イベント名：`call_start`
+2. 活動履歴のステータス登録 イベント名：`register_call_status`
+3. 活動履歴のステータス更新 イベント名：`update_call_status`
+4. 活動履歴のメモ更新 イベント名：`update_memo`
+5. 音声ファイル作成完了　※通話があった場合のみ発生 イベント名：`created_voice_audio_file`
+6. ASR正常またはエラー終了　※1分以上の通話があった場合のみ発生 イベント名：`asr_completed`
+7. ChatGTP(要約完了)　※1分以上の通話があった場合のみ発生 イベント名：`chatgpt_summarized`
+
+## データ連携のリクエスト
+
+- JSON形式でデータをPOST
+- リクエストでのタイムアウト、リトライ
+  - タイムアウト制限は30秒
+  - リトライ含めたリクエストの最大試行回数は4回
+  - リクエスト間の待機時間は3分
+  - 初回リクエストから最大回数までリトライした場合の時間は合計11分 この時点で正常にレスポンスが取得できない場合は、障害発生中と判断して 該当のwebhook登録情報を自動で無効化する
+  - データPOST時に例外発生、レスポンスのHttp Status Codeが 400番台、500番台の場合も障害発生中と判断して 該当のwebhook登録情報を自動で無効化する
+
+## 履歴連携webhook機能のヘッダー情報
+
+接続テスト、データ連携どちらの場合でも同じ
+
+```php
+'Accept' => 'application/json',
+'Content-type' => 'application/json',
+'x-api-key' => {ご登録いただいたAPIキー},
+```
+
+## データ連携のレスポンス
+
+- JSON形式
+
+## 履歴連携データのサンプル
+
+```jsx
+{"callHistoryId":238,"workgroupName":"test-work-group","projectName":"test-project","staffName":"test-staff","modifierName":"test-modifier","callTime":"2023-09-28T00:30:31.000000Z","callType":"着信","eventName":"call_start","customerName":"test-customer","telNo":"09012345678","callerNumber":null,"counterpartName":"test-counterpart","statusString":"test-status","recallFlag":0,"duration":null,"memo1":"test-memo","audioFileUrl":null,"customerUUID":"9c28dcd0-c306-424e-91bd-dc89e1b0d3c6","srText":"","sumText":null,"customeItem":""}
+```
+
+{"callHistoryId":238,"workgroupName":"test-work-group","projectName":"test-project","staffName":"test-staff","modifierName":"test-modifier","callTime":"2023-09-28T00:30:31.000000Z","callType":"着信","eventName":"call\_start","customerName":"test-customer","telNo":"09012345678","callerNumber":null,"counterpartName":"test-counterpart","statusString":"test-status","recallFlag":0,"duration":null,"memo1":"test-memo","audioFileUrl":null,"customerUUID":"9c28dcd0-c306-424e-91bd-dc89e1b0d3c6","srText":"","sumText":null,"customeItem":""}
+
+## 履歴連携データの項目について
+
+表-1. 活動履歴のデータ項目一覧
+
+| No | 項目名 | 説明 | 属性 | サンプル値 |
+| :-- | :-- | :-- | :-- | :-- |
+| 1 | callHistoryId | 活動履歴のID | Number | 1 |
+| (更新時のレコード識別に使用) |  |  |  |  |
+| 2 | workgroupName | ワークグループ名 | String | テストワークグループ名 |
+| 3 | projectName | プロジェクト名 | String | テストプロジェクト名 |
+| 4 | staffName | ユーザー名 | String | スタッフ太郎 |
+| 5 | modifierName | 担当営業名 | String | 営業花子 |
+| 6 | callTime | 発着信日時 | String | 2023-09-25T07:50:23.000000 |
+| 7 | callType | コール種別 | String | 着信 |
+| 8 | eventName | イベント名 | String | call\_start |
+| 9 | customerName | 顧客名 | String | 顧客二郎 |
+| 10 | telNo | 電話番号 | String | 03-1234-5678 |
+| 11 | callerNumber | 発信元番号 | String | 03-9876-5432 |
+| 12 | counterpartName | 応対者名 | String | 応対三郎 |
+| 13 | statusString | 最新コールステータス | String | 不在 |
+| 14 | recallFlag | 再コールフラグ | number | 0 |
+| 15 | duration | 通話時間 | String | 00:01:30 |
+| 16 | memo1 | メモ1 | String | めも |
+| 17 |  | ~~録音ファイルURL~~ | ~~String~~ | セキュリティ上の理由より廃止 |
+| 18 | customerUUID | 顧客UUID | String | 9c28dcd0-c306-424e-91bd-dc89e1b0d3c6 |
+| 19 | srText | 通話全体のテキスト | String | 通話内容 |
+| 20 | sumText | 通話の要約 | String | 通話内容の要約 |
+| 21 | customItem | カスタムパラメータ | String | "abc-5es2f-xyz” |
+| 22 | callHistoryUrl | 活動履歴URL | String |  |
+
+### カスタムパラメータについて
+
+ClicktoCall用途において、URLパラメータで指定された値をバトンすることが可能です。
+
+自社CRMなどで発信のタイミングで任意の文字列を渡したい際などにご利用ください。
+
+① comdesktoプロトコルでリンク化
+
+\<a href=“comdeskto://comdesk.com/call?number={電話番号の値}&crm\_object\_id={任意の値}“\>{電話番号の値}\</a\>
+
+②Comdesk Desktopが立ち上がり電話が発信される（crm\_object\_idに保存される）
+
+③切断をトリガーにcrm\_object\_idの任意の値がwebhookのcustomItemで渡される。
+
+## 障害発生した場合
+
+### 障害によりwebhookが自動無効化になった後の貴社の対応
+
+1. 貴社のシステム障害の復旧措置
+2. システム管理者権限ユーザーで、履歴連携webhook画面から 無効になったwebhookで再度接続テストを行う → 正常に完了すれば、webhookが有効になりその後からデータ連携が再開される
+
+### 障害により自動無効化になったwebhookの、無効化になっていた期間のデータを再送するには
+
+障害による自動無効化されていた期間の連携データを残しておく専用のログファイルがある。 そのファイルから復旧対象となる部分を抽出して、復旧を行うスクリプトに渡して手動実行する。
+
+（自動で復旧は無い、Widsley側の対応）
+
+※ webhookの無効化には、障害による自動無効化とは別に 　システム管理者権限ユーザーが、履歴連携webhook画面上でwebhookのON/OFF を切替できる。 　システム管理者権限ユーザーが特定のwebhookをOFFにした場合、その間のデータ連携は行われない。
+
+かつ、OFFになっている間のwebhookは復旧用のログも残していないため 　後からのデータ連携の復旧は行えない。
