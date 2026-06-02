@@ -1,0 +1,104 @@
+---
+title: "Webhook"
+description: "リアルタイムイベントの購読、署名検証、リプレイ対策、再送スケジュールを理解します。"
+---
+
+Webhook は、イベント発生と同時にあなたの HTTPS エンドポイントへイベントを送信します。ポーリングは不要です。登録と管理は [Webhook API](/developer/ja/api-reference/webhooks) で行います。
+
+<Note>
+  アウトバウンド Webhook は **`open_api_advanced`** ライセンスと、`webhooks:manage` スコープを持つキーが必要です。
+</Note>
+
+## イベント
+
+| イベント | 発生タイミング | 主なペイロードデータ |
+| --- | --- | --- |
+| `call.completed` | 通話が完了し保存されたとき | 通話時間、ステータス、メモ、文字起こし、要約、音声分析、録音 URL |
+| `call.missed` | 着信が応答されなかったとき | 発信者番号、着信番号、不在着信時刻 |
+| `call.started` | 通話が接続したとき | call\_id、番号、キャリア |
+| `transcription.completed` | AI 文字起こしが完了したとき | call\_id、全文 |
+| `summary.completed` | AI 要約が完了したとき | call\_id、要約テキスト |
+| `customer.created` | 顧客が登録されたとき | customer\_id、名前、電話番号、プロジェクト、external\_id |
+| `customer.updated` | 顧客が更新されたとき | customer\_id、変更フィールド |
+
+## ペイロードの形
+
+各配信は次のエンベロープを持つ `POST` です：
+
+```json
+{
+  "event_id": "evt_7f3a9b2c-1234-5678-abcd-ef0123456789",
+  "timestamp": 1748142000,
+  "event": "call.completed",
+  "data": {
+    "call_id": "call_abc123",
+    "status": "connected",
+    "duration_seconds": 330,
+    "summary": "新製品の提案について議論。来週デモを予定。",
+    "external_id": "SF-LEAD-001"
+  }
+}
+```
+
+| フィールド | 説明 |
+| --- | --- |
+| `event_id` | イベントごとに一意な UUID（再送でも**同じ**値を再利用） |
+| `timestamp` | イベント生成時刻の Unix エポック秒 |
+| `event` | イベント種別 |
+| `data` | イベント固有のペイロード |
+
+## 署名を検証する
+
+各配信には `X-Comdesk-Signature` ヘッダー（生のリクエストボディの HMAC-SHA256、Webhook に紐づく API キーを鍵とする）が付きます。偽造リクエストを拒否するため、**処理前に必ず検証**してください。
+
+<CodeGroup>
+
+```javascript Node.js
+import crypto from "crypto";
+
+function verify(rawBody, signature, secret) {
+  const expected = crypto
+    .createHmac("sha256", secret)
+    .update(rawBody)
+    .digest("hex");
+  return crypto.timingSafeEqual(
+    Buffer.from(signature),
+    Buffer.from(expected)
+  );
+}
+```
+
+```python Python
+import hmac, hashlib
+
+def verify(raw_body: bytes, signature: str, secret: str) -> bool:
+    expected = hmac.new(secret.encode(), raw_body, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(signature, expected)
+```
+
+</CodeGroup>
+
+<Warning>
+  HMAC は、JSON のパースや再シリアライズ前の**生の**リクエストボディのバイト列に対して計算してください。JSON を再エンコードするとバイト列が変わり、検証が失敗します。比較は定数時間で行ってください。
+</Warning>
+
+## リプレイ対策
+
+署名は真正性を証明しますが、新しさは証明しません。次も併せて強制してください：
+
+1. 処理した各イベントの **`event_id` を保存**し、**24 時間以内の重複を拒否**します（再送は同じ `event_id` を再利用するため、ハンドラーの冪等性も担保されます）。
+2. **`timestamp` が受信時刻から 5 分以上ずれているイベントを拒否**します。
+
+## 再送スケジュール
+
+エンドポイントが **10 秒**以内に応答しない、または 2xx 以外を返した場合、Comdesk は指数バックオフで最大 **5 回**再送します：
+
+| 試行 | 失敗後の遅延 |
+| --- | --- |
+| 1 | 1 分 |
+| 2 | 5 分 |
+| 3 | 30 分 |
+| 4 | 2 時間 |
+| 5 | 24 時間 |
+
+イベントを**受理**したら（キューに永続化したら）すぐに `2xx` を返し、その後に非同期で処理してください。すべての配信試行は管理画面の Webhook 配信ログに記録されます。

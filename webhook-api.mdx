@@ -1,0 +1,91 @@
+---
+title: "Webhook API"
+description: "Webhook サブスクリプションの登録・一覧・更新・削除・テスト。"
+---
+
+ベース URL：`https://app.comdesk.com/api/v1`
+
+<Note>
+  Webhook 管理は **`open_api_advanced`** ライセンスと、`webhooks:manage` スコープを持つキーが必要です。イベントペイロード、署名検証、再送スケジュールは [Webhook ガイド](/developer/ja/webhooks) を参照してください。
+</Note>
+
+| メソッド | パス | スコープ |
+| --- | --- | --- |
+| `POST` | `/webhooks` | `webhooks:manage` |
+| `GET` | `/webhooks` | `webhooks:manage` |
+| `PUT` | `/webhooks/{webhookId}` | `webhooks:manage` |
+| `DELETE` | `/webhooks/{webhookId}` | `webhooks:manage` |
+| `POST` | `/webhooks/{webhookId}/test` | `webhooks:manage` |
+
+---
+
+## Webhook を登録する
+
+`POST /webhooks`
+
+### ボディ
+
+<ParamField body="url" type="string" required>
+  `POST` 配信を受信する HTTPS エンドポイント。外部から到達可能である必要があります。
+</ParamField>
+
+<ParamField body="events" type="array" required>
+  購読するイベント種別。例：`["call.completed", "call.missed"]`。[イベント一覧](/developer/ja/webhooks#イベント) を参照。
+</ParamField>
+
+<ParamField body="filters" type="object">
+  配信を絞り込みます。`project_ids`（整数の配列）と `call_status`（文字列の配列、例：`["missed_call", "no_answer"]`）に対応。
+</ParamField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://app.comdesk.com/api/v1/webhooks \
+  -H "Authorization: Bearer cdsk_live_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "label": "Slack 通知",
+    "url": "https://hooks.example.com/comdesk",
+    "events": ["call.missed", "call.completed"],
+    "filters": { "project_ids": [456] },
+    "is_enabled": true
+  }'
+```
+
+</CodeGroup>
+
+---
+
+## Webhook 一覧
+
+`GET /webhooks`
+
+テナントのすべての Webhook を返します。
+
+---
+
+## Webhook の更新
+
+`PUT /webhooks/{webhookId}`
+
+登録と同じフィールドを受け付けます。変更分のみ送信してください。
+
+---
+
+## Webhook の削除
+
+`DELETE /webhooks/{webhookId}`
+
+Webhook を論理削除します。配信は即時に停止します。
+
+---
+
+## Webhook のテスト
+
+`POST /webhooks/{webhookId}/test`
+
+設定済み URL にサンプルペイロードを送信し、接続性と署名処理を検証できます。
+
+<Warning>
+  テストエンドポイントの正確なレスポンスボディはソース PRD に記載されていません。稼働中の API でご確認ください。
+</Warning>

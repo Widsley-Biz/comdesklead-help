@@ -1,0 +1,40 @@
+---
+title: "IVR"
+description: "IVR 通話フローをプログラムからトリガーします。"
+---
+
+ベース URL：`https://app.comdesk.com/api/v1`
+
+<Note>
+  IVR トリガーは **`open_api_advanced`** ライセンスと、`calls:initiate` スコープを持つキーが必要です。
+</Note>
+
+| メソッド | パス | スコープ |
+| --- | --- | --- |
+| `POST` | `/ivr/trigger` | `calls:initiate` |
+
+---
+
+## IVR フローをトリガーする
+
+`POST /ivr/trigger`
+
+IVR（自動音声応答）通話フローを開始し、開始されたセッションの `session_id` を返します。
+
+<Warning>
+  このエンドポイントは PRD（§2.1.5）に記載されていますが、リクエスト／レスポンスのスキーマはソース資料に**まだ定義されていません**。以下のフィールドは暫定です。実装前に Comdesk プラットフォームチームと契約内容を確認してください。
+</Warning>
+
+### レスポンス
+
+<ResponseExample>
+
+```json 200
+{
+  "data": {
+    "session_id": "ivr_..."
+  }
+}
+```
+
+</ResponseExample>

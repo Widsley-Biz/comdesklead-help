@@ -1,0 +1,134 @@
+---
+title: "通話"
+description: "発信の実行と、AI 文字起こし・要約・音声分析を含む通話履歴の取得。"
+---
+
+ベース URL：`https://app.comdesk.com/api/v1`
+
+| メソッド | パス | スコープ |
+| --- | --- | --- |
+| `POST` | `/calls/initiate` | `calls:initiate` |
+| `GET` | `/calls` | `calls:read` |
+| `GET` | `/calls/{callId}` | `calls:read` |
+
+---
+
+## 発信する
+
+`POST /calls/initiate`
+
+指定したスタッフから顧客の番号へ発信します（クリックして発信）。
+
+### ボディ
+
+<ParamField body="phone_number" type="string" required>
+  発信先番号。7〜20 文字（数字、ハイフン、`+`）。形式が不正な場合は `422` を返します。
+</ParamField>
+
+<ParamField body="staff_id" type="integer" required>
+  発信するスタッフの ID。自テナント内に存在する必要があります。
+</ParamField>
+
+<ParamField body="project_id" type="integer" required>
+  通話が属するプロジェクトの ID。自テナント内に存在する必要があります。
+</ParamField>
+
+<ParamField body="external_id" type="string">
+  自社システムのレコード ID（最大 255 文字）。相関のため Webhook で返されます。テナント内で一意である必要があり、重複時は `409` を返します。
+</ParamField>
+
+<ParamField body="metadata" type="object">
+  任意の自由形式オブジェクト。例：`{ "crm_url": "https://..." }`。
+</ParamField>
+
+### レスポンス
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://app.comdesk.com/api/v1/calls/initiate \
+  -H "Authorization: Bearer cdsk_live_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "phone_number": "+819012345678",
+    "staff_id": 101,
+    "project_id": 456,
+    "external_id": "SF-LEAD-00100"
+  }'
+```
+
+</CodeGroup>
+
+<ResponseExample>
+
+```json 200
+{
+  "data": {
+    "call_id": "call_Kp2mRn9sQw",
+    "status": "initiating",
+    "staff_id": 101,
+    "initiated_at": "2026-06-02T08:30:00Z"
+  }
+}
+```
+
+</ResponseExample>
+
+---
+
+## 通話一覧
+
+`GET /calls`
+
+指定した期間の通話履歴をページネーション付きで返します。
+
+### クエリパラメータ
+
+<ParamField query="from" type="string" required>
+  開始日（ISO 8601、例：`2026-03-01`）。
+</ParamField>
+
+<ParamField query="to" type="string" required>
+  終了日。`from`→`to` の範囲は **31 日**を超えられず、`from` は最大 **180 日**前までです。いずれかを超えると `422` を返します。
+</ParamField>
+
+<ResponseExample>
+
+```json 200
+{
+  "data": [
+    {
+      "call_id": "call_abc123",
+      "call_type": "outbound",
+      "status": "connected",
+      "phone_number": "090****5678",
+      "staff_id": 101,
+      "project_id": 456,
+      "started_at": "2026-03-02T01:10:00Z",
+      "ended_at": "2026-03-02T01:15:30Z",
+      "duration_seconds": 330,
+      "external_id": "SF-LEAD-00100"
+    }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "per_page": 50,
+    "total": 128,
+    "last_page": 3
+  }
+}
+```
+
+</ResponseExample>
+
+---
+
+## 通話の取得
+
+`GET /calls/{callId}`
+
+1 件の通話の詳細を返します。利用可能な場合は AI 由来のフィールドも含みます。
+
+<Note>
+  一覧／ログのレスポンスでは、PII ポリシーにより `phone_number` はマスクされます（先頭 3 桁 \+ 末尾 4 桁、例：`090****5678`）。
+</Note>

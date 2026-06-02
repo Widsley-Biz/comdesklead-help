@@ -1,0 +1,129 @@
+---
+title: "顧客"
+description: "顧客の登録・一括インポート・一覧・取得・更新を行い、external_id で相互参照します。"
+---
+
+ベース URL：`https://app.comdesk.com/api/v1`
+
+| メソッド | パス | スコープ |
+| --- | --- | --- |
+| `POST` | `/customers` | `customers:write` |
+| `POST` | `/customers/bulk` | `customers:write` |
+| `GET` | `/customers` | `customers:read` |
+| `GET` | `/customers/{customerId}` | `customers:read` |
+| `PUT` | `/customers/{customerId}` | `customers:write` |
+
+---
+
+## 顧客オブジェクト
+
+<Warning>
+  レスポンスのフリガナフィールドは PRD では `name_kana` と記載されていますが、Postman テストでは `kana` を参照しています。利用前に稼働中の API で正確なキー名を確認してください。
+</Warning>
+
+---
+
+## 顧客を登録する
+
+`POST /customers`
+
+### ボディ
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://app.comdesk.com/api/v1/customers \
+  -H "Authorization: Bearer cdsk_live_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "project_id": 456,
+    "external_id": "SF-LEAD-00100",
+    "name": "株式会社マジュ・ブルサマ",
+    "tel1": "+81337778888"
+  }'
+```
+
+</CodeGroup>
+
+<ResponseExample>
+
+```json 201
+{
+  "data": {
+    "customer_id": 90123,
+    "external_id": "SF-LEAD-00100",
+    "name": "株式会社マジュ・ブルサマ",
+    "tel1": "+81337778888",
+    "project_id": 456,
+    "created_at": "2026-06-02T08:30:00Z",
+    "updated_at": "2026-06-02T08:30:00Z"
+  }
+}
+```
+
+</ResponseExample>
+
+---
+
+## 一括登録
+
+`POST /customers/bulk`
+
+1 リクエストで **1〜500 件**の顧客を登録します。
+
+### ボディ
+
+<ParamField body="customers" type="array" required>
+  顧客オブジェクトの配列。各要素は単一登録のボディと同じフィールドを使用。最大 500 件。
+</ParamField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://app.comdesk.com/api/v1/customers/bulk \
+  -H "Authorization: Bearer cdsk_live_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customers": [
+      { "project_id": 456, "external_id": "SF-LEAD-00100", "name": "株式会社マジュ・ブルサマ", "tel1": "+81337778888" },
+      { "project_id": 456, "external_id": "SF-LEAD-00101", "name": "ブディ・サントソ", "tel1": "+819012345678" }
+    ]
+  }'
+```
+
+</CodeGroup>
+
+---
+
+## 顧客一覧
+
+`GET /customers`
+
+<ResponseExample>
+
+```json 200
+{
+  "data": [
+    { "customer_id": 90123, "external_id": "SF-LEAD-00100", "name": "株式会社マジュ・ブルサマ", "project_id": 456 }
+  ],
+  "pagination": { "current_page": 1, "per_page": 50, "total": 1, "last_page": 1 }
+}
+```
+
+</ResponseExample>
+
+---
+
+## 顧客の取得
+
+`GET /customers/{customerId}`
+
+完全な[顧客オブジェクト](#顧客オブジェクト)を返します。
+
+---
+
+## 顧客の更新
+
+`PUT /customers/{customerId}`
+
+部分更新 — 変更したいフィールドのみ送信します。登録と同じフィールドを受け付けます（作成時に固定される `project_id` を除く）。

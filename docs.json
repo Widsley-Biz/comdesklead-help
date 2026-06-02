@@ -381,7 +381,24 @@
           },
           {
             "group": "Open API",
-            "pages": []
+            "pages": [
+              "introduction",
+              "file",
+              "file-1",
+              "file-2",
+              "file-3",
+              "webhook",
+              {
+                "group": "API-Reference",
+                "pages": [
+                  "file-4",
+                  "file-5",
+                  "file-6",
+                  "webhook-api",
+                  "ivr"
+                ]
+              }
+            ]
           }
         ]
       }

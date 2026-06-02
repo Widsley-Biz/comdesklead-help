@@ -1,0 +1,61 @@
+---
+title: "レポート"
+description: "BI ツール向けに集計済みの通話統計を取得 — サマリー、通話別、ユーザー別レポート。"
+---
+
+ベース URL：`https://app.comdesk.com/api/v1`
+
+<Note>
+  レポート API は **`open_api_advanced`** ライセンスと、`reports:read` スコープを持つキーが必要です。
+</Note>
+
+| メソッド | パス | スコープ |
+| --- | --- | --- |
+| `GET` | `/reports/summary` | `reports:read` |
+| `GET` | `/reports/calls` | `reports:read` |
+| `GET` | `/reports/users` | `reports:read` |
+
+すべてのレポートエンドポイントは同じ期間クエリパラメータを共有します。
+
+### クエリパラメータ
+
+<ParamField query="to" type="string" required>
+  終了日。範囲は **31 日**を超えられず、`from` は最大 **180 日**前まで。いずれかを超えると `422` を返します。
+</ParamField>
+
+---
+
+## サマリーレポート
+
+`GET /reports/summary`
+
+テナント単位の集計：総通話数、平均通話時間、成功率を期間別に分解します。
+
+<CodeGroup>
+
+```bash cURL
+curl "https://app.comdesk.com/api/v1/reports/summary?from=2026-05-01&to=2026-05-31" \
+  -H "Authorization: Bearer cdsk_live_xxx"
+```
+
+</CodeGroup>
+
+---
+
+## 通話レポート
+
+`GET /reports/calls`
+
+日付・スタッフ・ステータスで絞り込める通話別統計。詳細な BI 抽出に適しています。
+
+---
+
+## ユーザーレポート
+
+`GET /reports/users`
+
+スタッフ別の統計：通話数、トークレシオなどの関連指標。
+
+<Note>
+  31 日を超える期間のデータは、連続した範囲で複数回リクエストし、結果を自社側で結合してください。
+</Note>
