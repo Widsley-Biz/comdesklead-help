@@ -374,16 +374,14 @@
         "tab": "Developer",
         "groups": [
           {
-            "group": "Developer",
+            "group": "Webhook",
             "pages": [
-              "developer/overview"
+              "developer/api/overview"
             ]
           },
           {
             "group": "API リファレンス",
-            "pages": [
-              "developer/api/overview"
-            ]
+            "pages": []
           },
           {
             "group": "Open API",
