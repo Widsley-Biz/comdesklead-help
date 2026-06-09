@@ -383,17 +383,17 @@
             "group": "Open API",
             "pages": [
               "introduction",
-              "quickatart",
-              "file-1",
-              "file-2",
+              "quickstart",
+              "authentication",
+              "rate",
               "file-3",
               "webhook",
               {
                 "group": "API-Reference",
                 "pages": [
-                  "file-4",
-                  "file-5",
-                  "file-6",
+                  "call",
+                  "customer",
+                  "report",
                   "webhook-api",
                   "ivr"
                 ]
