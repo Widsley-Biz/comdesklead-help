@@ -325,7 +325,8 @@
                   "release/notes/54798747388569",
                   "release/notes/55302345283865",
                   "release/notes/55684932797849",
-                  "release/notes/56339041242521"
+                  "release/notes/56339041242521",
+                  "release/notes/untitled-page"
                 ]
               },
               {
@@ -382,7 +383,7 @@
           {
             "group": "Open API",
             "pages": [
-              "file-1",
+              "intro",
               "quickstart",
               "authentication",
               "rate",
