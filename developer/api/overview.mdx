@@ -16,7 +16,6 @@ title: "Webhook概要"
 - webhookのエンドポイントURL
 - webhookのAPIキー
 - 接続テストの実施
-
 - 接続テストが正常に完了すれば、データ連携の準備が整い 連携対象のイベントが実施されたら、データ連携が行われる
 
 # 仕様
@@ -77,26 +76,26 @@ title: "Webhook概要"
 
 | No | 項目名 | 説明 | 属性 | サンプル値 |
 | :-- | :-- | :-- | :-- | :-- |
-| 1 | callHistoryId | 活動履歴のID | Number | 1 |
-| 2 | workgroupName | ワークグループ名 | String | テストワークグループ名 |
-| 3 | projectName | プロジェクト名 | String | テストプロジェクト名 |
-| 4 | staffName | ユーザー名 | String | スタッフ太郎 |
-| 5 | modifierName | 担当営業名 | String | 営業花子 |
-| 6 | callTime | 発着信日時 | String | 2023-09-25T07:50:23.000000 |
+| 1 | callHistoryId | 活動履歴ID | Number | 1 |
+| 2 | workgroupName | ワークグループ | String | テストワークグループ名 |
+| 3 | projectName | プロジェクト | String | テストプロジェクト名 |
+| 4 | staffName | 作成ユーザー | String | スタッフ太郎 |
+| 5 | modifierName | 更新ユーザー | String | 営業花子 |
+| 6 | callTime | コール日時 | String | 2023-09-25T07:50:23.000000 |
 | 7 | callType | コール種別 | String | 着信 |
 | 8 | eventName | イベント名 | String | call\_start |
-| 9 | customerName | 顧客名 | String | 顧客二郎 |
-| 10 | telNo | 電話番号 | String | 03-1234-5678 |
+| 9 | customerName | 名前 | String | 顧客二郎 |
+| 10 | telNo | 発信先番号 | String | 03-1234-5678 |
 | 11 | callerNumber | 発信元番号 | String | 03-9876-5432 |
-| 12 | counterpartName | 応対者名 | String | 応対三郎 |
-| 13 | statusString | 最新コールステータス | String | 不在 |
-| 14 | recallFlag | 再コールフラグ | number | 0 |
+| 12 | counterpartName | 応対者 | String | 応対三郎 |
+| 13 | statusString | コールステータス | String | 不在 |
+| 14 | recallFlag | 再コール予定 | number | 0 |
 | 15 | duration | 通話時間 | String | 00:01:30 |
-| 16 | memo1 | メモ1 | String | めも |
+| 16 | memo1 | 通話メモ | String | めも |
 | 17 |  | 録音ファイルURL | String | 利用には個別契約が必要となります |
 | 18 | customerUUID | 顧客UUID | String | 9c28dcd0-c306-424e-91bd-dc89e1b0d3c6 |
-| 19 | srText | 通話全体のテキスト | String | 通話内容 |
-| 20 | sumText | 通話の要約 | String | 通話内容の要約 |
+| 19 | srText | 通話テキスト | String | 通話内容 |
+| 20 | sumText | 要約 | String | 通話内容の要約 |
 | 21 | customItem | カスタムパラメータ | String | "abc-5es2f-xyz” |
 | 22 | callHistoryUrl | 活動履歴URL | String |  |
 
