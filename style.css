@@ -3,8 +3,10 @@
   display: none !important;
 }
 
+:has(> #assistant-entry) {
+  justify-content: flex-end !important;
+}
 #assistant-entry,
 #assistant-entry-mobile {
   margin-left: auto !important;
-  margin-right: auto !important;
 }
