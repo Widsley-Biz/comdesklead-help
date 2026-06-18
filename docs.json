@@ -19,7 +19,8 @@
           {
             "group": "ホーム",
             "pages": [
-              "index"
+              "index",
+              "search"
             ]
           },
           {
