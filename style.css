@@ -2,3 +2,8 @@
 #search-bar-entry-mobile {
   display: none !important;
 }
+
+#assistant-entry,
+#assistant-entry-mobile {
+  margin-left: auto !important;
+}
