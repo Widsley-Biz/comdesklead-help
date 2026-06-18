@@ -1,0 +1,2894 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Comdesk Lead Open API (EN)",
+        "description": "Open API for external CRM integration (Salesforce, HubSpot, etc.).\n\nAuthentication uses an API key via the `Authorization: Bearer <api_key>` header.\n\nAPI keys can be issued from the tenant management page.\n\n---\n🇯🇵 [日本語版 → /api/docs](/api/docs)",
+        "contact": {
+            "name": "Comdesk Developer Support",
+            "email": "dev@comdesk.jp"
+        },
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "/",
+            "description": "Current server"
+        },
+        {
+            "url": "https://dl.comdesk.jp",
+            "description": "Development (dl)"
+        },
+        {
+            "url": "https://sl.comdesk.jp",
+            "description": "Staging (sl)"
+        },
+        {
+            "url": "https://pl.comdesk.jp",
+            "description": "Production (pl)"
+        }
+    ],
+    "paths": {
+        "/api/v1/calls/initiate": {
+            "post": {
+                "tags": [
+                    "Calls"
+                ],
+                "summary": "Initiate outbound call (Click to Call)",
+                "description": "Starts an outbound call from the CRM. Returns a call_id for tracking. Requires scope `calls:initiate`.",
+                "operationId": "callsInitiate",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "phone_number",
+                                    "staff_id",
+                                    "project_id"
+                                ],
+                                "properties": {
+                                    "phone_number": {
+                                        "description": "Destination phone number (E.164 or Japan domestic format)",
+                                        "type": "string",
+                                        "pattern": "^[0-9\\-\\+]{7,20}$",
+                                        "example": "09012345678"
+                                    },
+                                    "staff_id": {
+                                        "description": "ID of the staff member initiating the call",
+                                        "type": "integer",
+                                        "example": 123
+                                    },
+                                    "project_id": {
+                                        "description": "Project ID to record the call under",
+                                        "type": "integer",
+                                        "example": 456
+                                    },
+                                    "external_id": {
+                                        "description": "CRM record ID for linking",
+                                        "type": "string",
+                                        "example": "SF-LEAD-001",
+                                        "nullable": true,
+                                        "maxLength": 255
+                                    },
+                                    "metadata": {
+                                        "description": "Arbitrary metadata from CRM (stored but not processed)",
+                                        "type": "object",
+                                        "example": {
+                                            "crm_url": "https://crm.example.com/leads/001"
+                                        },
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Call initiated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "call_id": {
+                                                    "type": "string",
+                                                    "example": "call_abc123"
+                                                },
+                                                "status": {
+                                                    "type": "string",
+                                                    "example": "initiating"
+                                                },
+                                                "phone_number": {
+                                                    "type": "string",
+                                                    "example": "09012345678"
+                                                },
+                                                "staff_id": {
+                                                    "type": "integer",
+                                                    "example": 123
+                                                },
+                                                "initiated_at": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "example": "2026-03-10T10:00:00+09:00"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid API key",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Insufficient scope calls:initiate",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Duplicate external_id",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limit exceeded",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "x-acceptance-criteria": [
+                    "✅ Client can initiate an outbound call by sending phone_number, staff_id, and project_id",
+                    "✅ Client can include external_id for correlation with CRM records",
+                    "✅ Response 200 contains call_id and status initiating",
+                    "❌ Request rejected with HTTP 422 when phone_number, staff_id, or project_id is invalid",
+                    "❌ Request rejected with HTTP 409 when external_id is duplicate (active call with same external_id exists)",
+                    "🔒 Requires scope calls:initiate",
+                    "🪪 X-Request-ID header is echoed in the response"
+                ]
+            }
+        },
+        "/api/v1/calls": {
+            "get": {
+                "tags": [
+                    "Calls"
+                ],
+                "summary": "List call history",
+                "description": "Returns call history with filters and pagination. Date range maximum is 31 days. Requires scope `calls:read`.",
+                "operationId": "callsList",
+                "parameters": [
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "description": "Start date (YYYY-MM-DD). Maximum 180 days ago.",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2026-03-01"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "description": "End date (YYYY-MM-DD). Maximum 31 days from 'from'.",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2026-03-31"
+                        }
+                    },
+                    {
+                        "name": "project_id",
+                        "in": "query",
+                        "description": "Filter by project ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "staff_id",
+                        "in": "query",
+                        "description": "Filter by staff ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "call_type",
+                        "in": "query",
+                        "description": "Filter by call type",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "outbound",
+                                "inbound"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Filter by status (comma-separated)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "connected,no_answer"
+                        }
+                    },
+                    {
+                        "name": "phone_number",
+                        "in": "query",
+                        "description": "Partial match on phone number",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 50,
+                            "maximum": 200
+                        }
+                    },
+                    {
+                        "name": "sort",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "started_at",
+                            "enum": [
+                                "started_at",
+                                "duration"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "order",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "desc",
+                            "enum": [
+                                "asc",
+                                "desc"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Call history list",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/CallHistoryItem"
+                                            }
+                                        },
+                                        "pagination": {
+                                            "$ref": "#/components/schemas/PaginationMeta"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid API key",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Insufficient scope calls:read",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Date range exceeds 31 days or invalid parameters",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limit exceeded",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "x-acceptance-criteria": [
+                    "✅ Client can retrieve call history with date-range filter (from, to), project, staff, and status",
+                    "❌ Date range is at most 31 days per request; exceeding returns HTTP 422",
+                    "✅ Supports pagination (page, per_page max 200)",
+                    "✅ Response includes transcription, summary, speech_analysis, recording_url, and external_id",
+                    "🔒 Requires scope calls:read"
+                ]
+            }
+        },
+        "/api/v1/calls/{callId}": {
+            "get": {
+                "tags": [
+                    "Calls"
+                ],
+                "summary": "Get call detail",
+                "description": "Returns detailed information for a single call including transcription, summary, and speech analysis. Requires scope `calls:read`.",
+                "operationId": "callsDetail",
+                "parameters": [
+                    {
+                        "name": "callId",
+                        "in": "path",
+                        "description": "Call ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 12345
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Call detail",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/CallHistoryItem"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid API key",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Insufficient scope calls:read",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Call not found in this tenant",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limit exceeded",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "x-acceptance-criteria": [
+                    "✅ Client can retrieve full detail of a single call by callId",
+                    "✅ Response includes all fields including transcription, summary, and speech_analysis",
+                    "❌ Returns HTTP 404 when callId is not found within the same tenant",
+                    "🔒 Requires scope calls:read"
+                ]
+            }
+        },
+        "/api/v1/customers": {
+            "get": {
+                "tags": [
+                    "Customers"
+                ],
+                "summary": "List customers",
+                "description": "Returns a paginated customer list with optional filters. Requires scope `customers:read`.",
+                "operationId": "customersList",
+                "parameters": [
+                    {
+                        "name": "project_id",
+                        "in": "query",
+                        "description": "Filter by project ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "keyword",
+                        "in": "query",
+                        "description": "Partial match on name or phone number",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 50,
+                            "maximum": 200
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Customer list",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "customer_id": {
+                                                        "type": "integer",
+                                                        "example": 78901
+                                                    },
+                                                    "external_id": {
+                                                        "type": "string",
+                                                        "example": "CRM-LEAD-001",
+                                                        "nullable": true
+                                                    },
+                                                    "name": {
+                                                        "type": "string",
+                                                        "example": "Test Corporation"
+                                                    },
+                                                    "tel1": {
+                                                        "type": "string",
+                                                        "example": "0312345678"
+                                                    },
+                                                    "project_id": {
+                                                        "type": "integer",
+                                                        "example": 456
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        },
+                                        "pagination": {
+                                            "$ref": "#/components/schemas/PaginationMeta"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid API key",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Insufficient scope customers:read",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limit exceeded",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Customers"
+                ],
+                "summary": "Create customer",
+                "description": "Registers a new customer. Use `external_id` to link with CRM records. Requires scope `customers:write`.",
+                "operationId": "customersCreate",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "project_id",
+                                    "name"
+                                ],
+                                "properties": {
+                                    "project_id": {
+                                        "type": "integer",
+                                        "example": 456
+                                    },
+                                    "external_id": {
+                                        "type": "string",
+                                        "example": "CRM-LEAD-001",
+                                        "nullable": true,
+                                        "maxLength": 255
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Test Corporation",
+                                        "maxLength": 255
+                                    },
+                                    "name_kana": {
+                                        "type": "string",
+                                        "example": "Tesuto Kabushiki Kaisha",
+                                        "nullable": true,
+                                        "maxLength": 255
+                                    },
+                                    "tel1": {
+                                        "type": "string",
+                                        "example": "0312345678",
+                                        "nullable": true,
+                                        "maxLength": 30
+                                    },
+                                    "tel2": {
+                                        "type": "string",
+                                        "example": "09012345678",
+                                        "nullable": true
+                                    },
+                                    "prefecture": {
+                                        "type": "string",
+                                        "example": "Tokyo",
+                                        "nullable": true
+                                    },
+                                    "address1": {
+                                        "type": "string",
+                                        "example": "1-1-1 Shibuya, Shibuya-ku",
+                                        "nullable": true
+                                    },
+                                    "industry": {
+                                        "type": "string",
+                                        "example": "IT",
+                                        "nullable": true
+                                    },
+                                    "employee_scale": {
+                                        "type": "string",
+                                        "example": "100-299",
+                                        "nullable": true
+                                    },
+                                    "custom_fields": {
+                                        "type": "object",
+                                        "example": {
+                                            "field_1": "custom value"
+                                        },
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Customer created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "customer_id": {
+                                                    "type": "integer",
+                                                    "example": 78901
+                                                },
+                                                "external_id": {
+                                                    "type": "string",
+                                                    "example": "CRM-LEAD-001",
+                                                    "nullable": true
+                                                },
+                                                "name": {
+                                                    "type": "string",
+                                                    "example": "Test Corporation"
+                                                },
+                                                "project_id": {
+                                                    "type": "integer",
+                                                    "example": 456
+                                                },
+                                                "created_at": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid API key",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Insufficient scope customers:write",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Duplicate external_id within the same project",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limit exceeded",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "x-acceptance-criteria": [
+                    "✅ Client can register a new customer with external_id for CRM correlation",
+                    "✅ Response 201 contains customer_id that can be stored in the CRM for subsequent requests",
+                    "❌ Request with duplicate external_id (within the same project) returns HTTP 409",
+                    "🔒 Requires scope customers:write"
+                ]
+            }
+        },
+        "/api/v1/customers/bulk": {
+            "post": {
+                "tags": [
+                    "Customers"
+                ],
+                "summary": "Bulk create customers",
+                "description": "Registers up to 500 customers in a single request. Requires scope `customers:write`.",
+                "operationId": "customersBulkCreate",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "customers"
+                                ],
+                                "properties": {
+                                    "customers": {
+                                        "type": "array",
+                                        "items": {
+                                            "required": [
+                                                "project_id",
+                                                "name"
+                                            ],
+                                            "properties": {
+                                                "project_id": {
+                                                    "type": "integer",
+                                                    "example": 456
+                                                },
+                                                "external_id": {
+                                                    "type": "string",
+                                                    "nullable": true,
+                                                    "maxLength": 255
+                                                },
+                                                "name": {
+                                                    "type": "string",
+                                                    "example": "Test Corporation",
+                                                    "maxLength": 255
+                                                },
+                                                "tel1": {
+                                                    "type": "string",
+                                                    "example": "0312345678",
+                                                    "nullable": true,
+                                                    "maxLength": 30
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "maxItems": 500
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Bulk creation complete",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "created_count": {
+                                                    "type": "integer",
+                                                    "example": 97
+                                                },
+                                                "skipped_count": {
+                                                    "description": "Records skipped due to duplicate external_id",
+                                                    "type": "integer",
+                                                    "example": 3
+                                                },
+                                                "errors": {
+                                                    "description": "Per-record error details",
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid API key",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Insufficient scope customers:write",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Empty array or exceeds 500 records",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limit exceeded",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/customers/{customerId}": {
+            "get": {
+                "tags": [
+                    "Customers"
+                ],
+                "summary": "Get customer detail",
+                "description": "Returns detailed information for a single customer. Requires scope `customers:read`.",
+                "operationId": "customersShow",
+                "parameters": [
+                    {
+                        "name": "customerId",
+                        "in": "path",
+                        "description": "Customer ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 78901
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Customer detail",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "customer_id": {
+                                                    "type": "integer",
+                                                    "example": 78901
+                                                },
+                                                "external_id": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "name": {
+                                                    "type": "string",
+                                                    "example": "Test Corporation"
+                                                },
+                                                "name_kana": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "tel1": {
+                                                    "type": "string",
+                                                    "example": "0312345678"
+                                                },
+                                                "tel2": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "prefecture": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "address1": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "industry": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "employee_scale": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "custom_fields": {
+                                                    "type": "object",
+                                                    "nullable": true
+                                                },
+                                                "project_id": {
+                                                    "type": "integer",
+                                                    "example": 456
+                                                },
+                                                "created_at": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                },
+                                                "updated_at": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid API key",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Insufficient scope customers:read",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Customer not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limit exceeded",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Customers"
+                ],
+                "summary": "Update customer",
+                "description": "Updates an existing customer. Omitted fields are not changed. Requires scope `customers:write`.",
+                "operationId": "customersUpdate",
+                "parameters": [
+                    {
+                        "name": "customerId",
+                        "in": "path",
+                        "description": "Customer ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 78901
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Test Corporation (updated)",
+                                        "nullable": true
+                                    },
+                                    "name_kana": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "tel1": {
+                                        "type": "string",
+                                        "example": "0312345679",
+                                        "nullable": true
+                                    },
+                                    "tel2": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "prefecture": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "address1": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "industry": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "employee_scale": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "custom_fields": {
+                                        "type": "object",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Customer updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "customer_id": {
+                                                    "type": "integer",
+                                                    "example": 78901
+                                                },
+                                                "name": {
+                                                    "type": "string",
+                                                    "example": "Test Corporation (updated)"
+                                                },
+                                                "updated_at": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid API key",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Insufficient scope customers:write",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Customer not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limit exceeded",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ivr/trigger": {
+            "post": {
+                "tags": [
+                    "IVR"
+                ],
+                "summary": "Trigger IVR outbound call",
+                "description": "Queues an automated IVR outbound call to the given phone number. The call is dispatched asynchronously via the PBX queue endpoint. Returns a session_id for tracking. Requires scope `ivr:trigger`.",
+                "operationId": "ivrTrigger",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "phone_number",
+                                    "project_id"
+                                ],
+                                "properties": {
+                                    "phone_number": {
+                                        "description": "Destination phone number (digits, dashes, plus; 7–20 chars)",
+                                        "type": "string",
+                                        "pattern": "^[0-9\\-\\+]{7,20}$",
+                                        "example": "09012345678"
+                                    },
+                                    "project_id": {
+                                        "description": "Project ID to record the call under (must belong to the caller's tenant)",
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "queue_id": {
+                                        "description": "Work-group queue ID for distribution routing (must belong to the caller's tenant)",
+                                        "type": "integer",
+                                        "example": 7,
+                                        "nullable": true
+                                    },
+                                    "external_id": {
+                                        "description": "CRM record ID for deduplication and linking",
+                                        "type": "string",
+                                        "example": "SF-LEAD-001",
+                                        "nullable": true,
+                                        "maxLength": 255
+                                    },
+                                    "metadata": {
+                                        "description": "Arbitrary metadata from CRM (max 1 KB, stored but not processed)",
+                                        "type": "object",
+                                        "example": {
+                                            "crm_url": "https://crm.example.com/leads/001"
+                                        },
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "IVR call queued successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "session_id": {
+                                                    "type": "string",
+                                                    "example": "ivr_12345"
+                                                },
+                                                "status": {
+                                                    "type": "string",
+                                                    "example": "queued"
+                                                },
+                                                "phone_number": {
+                                                    "type": "string",
+                                                    "example": "09012345678"
+                                                },
+                                                "project_id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "initiated_at": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "example": "2026-03-10T10:00:00+09:00"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid API key",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Insufficient scope ivr:trigger",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Duplicate external_id — active IVR session already exists",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limit exceeded",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/reports/summary": {
+            "get": {
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Get call statistics summary",
+                "description": "Returns aggregated call statistics for a given period. Maximum 31 days, maximum 180 days ago. Requires scope `reports:read` and license `open_api_advanced`.",
+                "operationId": "reportsSummary",
+                "parameters": [
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "description": "Start date (YYYY-MM-DD)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2026-05-01"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "description": "End date (YYYY-MM-DD)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2026-05-14"
+                        }
+                    },
+                    {
+                        "name": "project_id",
+                        "in": "query",
+                        "description": "Filter by project ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Aggregated statistics",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "from": {
+                                                    "type": "string",
+                                                    "format": "date",
+                                                    "example": "2026-05-01"
+                                                },
+                                                "to": {
+                                                    "type": "string",
+                                                    "format": "date",
+                                                    "example": "2026-05-14"
+                                                },
+                                                "total_calls": {
+                                                    "type": "integer",
+                                                    "example": 1250
+                                                },
+                                                "total_out_calls": {
+                                                    "type": "integer",
+                                                    "example": 980
+                                                },
+                                                "total_out_connected": {
+                                                    "type": "integer",
+                                                    "example": 412
+                                                },
+                                                "total_in_calls": {
+                                                    "type": "integer",
+                                                    "example": 270
+                                                },
+                                                "total_in_connected": {
+                                                    "type": "integer",
+                                                    "example": 198
+                                                },
+                                                "connection_rate": {
+                                                    "description": "Outbound connection rate (%)",
+                                                    "type": "number",
+                                                    "format": "float",
+                                                    "example": 42.04
+                                                },
+                                                "total_duration_seconds": {
+                                                    "type": "integer",
+                                                    "example": 183600
+                                                },
+                                                "total_mybox": {
+                                                    "type": "integer",
+                                                    "example": 87
+                                                },
+                                                "total_appoints": {
+                                                    "type": "integer",
+                                                    "example": 34
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid API key",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Insufficient scope reports:read or license open_api_advanced",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Date range exceeds 31 days, from is 180+ days ago, or invalid params",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limit exceeded",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/reports/calls": {
+            "get": {
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Get call breakdown report",
+                "description": "Returns per-staff or per-project call breakdown data. Requires scope `reports:read` and license `open_api_advanced`.",
+                "operationId": "reportsCalls",
+                "parameters": [
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "description": "Start date (YYYY-MM-DD)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2026-05-01"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "description": "End date (YYYY-MM-DD)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2026-05-14"
+                        }
+                    },
+                    {
+                        "name": "project_id",
+                        "in": "query",
+                        "description": "Filter by project ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "staff_id",
+                        "in": "query",
+                        "description": "Filter by staff ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "group_by",
+                        "in": "query",
+                        "description": "Aggregation unit",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "staff",
+                            "enum": [
+                                "staff",
+                                "project",
+                                "day"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 50,
+                            "maximum": 200
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Call breakdown report",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        },
+                                        "pagination": {
+                                            "$ref": "#/components/schemas/PaginationMeta"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid API key",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Insufficient scope reports:read or license open_api_advanced",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Date range exceeds 31 days or invalid params",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limit exceeded",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/reports/users": {
+            "get": {
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Get per-user performance report",
+                "description": "Returns call performance metrics per staff member. Requires scope `reports:read` and license `open_api_advanced`.",
+                "operationId": "reportsUsers",
+                "parameters": [
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "description": "Start date (YYYY-MM-DD)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2026-05-01"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "description": "End date (YYYY-MM-DD)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2026-05-14"
+                        }
+                    },
+                    {
+                        "name": "project_id",
+                        "in": "query",
+                        "description": "Filter by project ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 50,
+                            "maximum": 200
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Per-user report",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "staff_id": {
+                                                        "type": "integer",
+                                                        "example": 123
+                                                    },
+                                                    "staff_name": {
+                                                        "type": "string",
+                                                        "example": "Tanaka Taro"
+                                                    },
+                                                    "total_calls": {
+                                                        "type": "integer",
+                                                        "example": 85
+                                                    },
+                                                    "connected_calls": {
+                                                        "type": "integer",
+                                                        "example": 32
+                                                    },
+                                                    "connection_rate": {
+                                                        "type": "number",
+                                                        "format": "float",
+                                                        "example": 37.6
+                                                    },
+                                                    "total_duration_seconds": {
+                                                        "type": "integer",
+                                                        "example": 12600
+                                                    },
+                                                    "avg_duration_seconds": {
+                                                        "type": "integer",
+                                                        "example": 148
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        },
+                                        "pagination": {
+                                            "$ref": "#/components/schemas/PaginationMeta"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid API key",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Insufficient scope reports:read or license open_api_advanced",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Date range exceeds 31 days or invalid params",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limit exceeded",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/webhooks": {
+            "get": {
+                "tags": [
+                    "Webhooks"
+                ],
+                "summary": "List webhooks",
+                "description": "Returns all registered webhooks. Requires scope `webhooks:manage`.",
+                "operationId": "webhooksList",
+                "responses": {
+                    "200": {
+                        "description": "Webhook list",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer",
+                                                        "example": 1
+                                                    },
+                                                    "name": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    },
+                                                    "url": {
+                                                        "type": "string",
+                                                        "format": "uri"
+                                                    },
+                                                    "secret_prefix": {
+                                                        "type": "string",
+                                                        "example": "whsec_ab12"
+                                                    },
+                                                    "events": {
+                                                        "type": "array",
+                                                        "items": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "is_active": {
+                                                        "type": "boolean"
+                                                    },
+                                                    "last_delivered_at": {
+                                                        "type": "string",
+                                                        "format": "date-time",
+                                                        "nullable": true
+                                                    },
+                                                    "consecutive_failures": {
+                                                        "type": "integer",
+                                                        "example": 0
+                                                    },
+                                                    "created_at": {
+                                                        "type": "string",
+                                                        "format": "date-time"
+                                                    },
+                                                    "updated_at": {
+                                                        "type": "string",
+                                                        "format": "date-time"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid API key",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Insufficient scope webhooks:manage or license open_api_advanced",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limit exceeded",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Webhooks"
+                ],
+                "summary": "Create webhook",
+                "description": "Registers an endpoint URL to receive Comdesk events. Payloads are sent with an HMAC-SHA256 signature in the `X-Comdesk-Signature` header. Requires scope `webhooks:manage` and license `open_api_advanced`.",
+                "operationId": "webhooksCreate",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "url",
+                                    "events"
+                                ],
+                                "properties": {
+                                    "url": {
+                                        "type": "string",
+                                        "format": "uri",
+                                        "example": "https://hooks.example.com/comdesk"
+                                    },
+                                    "events": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string",
+                                            "enum": [
+                                                "call.completed",
+                                                "call.missed",
+                                                "call.started",
+                                                "customer.created",
+                                                "customer.updated",
+                                                "transcription.completed",
+                                                "summary.completed"
+                                            ]
+                                        },
+                                        "example": [
+                                            "call.completed",
+                                            "call.missed"
+                                        ]
+                                    },
+                                    "filters": {
+                                        "properties": {
+                                            "call_status": {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "string"
+                                                },
+                                                "example": [
+                                                    "missed_call",
+                                                    "no_answer"
+                                                ]
+                                            },
+                                            "project_ids": {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "integer"
+                                                },
+                                                "example": [
+                                                    456,
+                                                    789
+                                                ]
+                                            }
+                                        },
+                                        "type": "object",
+                                        "nullable": true
+                                    },
+                                    "is_enabled": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "label": {
+                                        "type": "string",
+                                        "example": "Slack Notification — Missed Calls"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Webhook created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "name": {
+                                                    "type": "string",
+                                                    "example": "Slack Notification",
+                                                    "nullable": true
+                                                },
+                                                "url": {
+                                                    "type": "string",
+                                                    "format": "uri"
+                                                },
+                                                "secret": {
+                                                    "description": "HMAC secret for X-Comdesk-Signature verification. Only shown on creation.",
+                                                    "type": "string",
+                                                    "example": "whsec_xxx"
+                                                },
+                                                "secret_prefix": {
+                                                    "description": "First 12 chars of the secret for identification.",
+                                                    "type": "string",
+                                                    "example": "whsec_ab12"
+                                                },
+                                                "events": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    }
+                                                },
+                                                "is_active": {
+                                                    "type": "boolean"
+                                                },
+                                                "created_at": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Store this secret now. It cannot be retrieved later."
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid API key",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Insufficient scope webhooks:manage or license open_api_advanced",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid URL or empty events array",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limit exceeded",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "x-acceptance-criteria": [
+                    "✅ Client can register a URL endpoint to receive specific events (call.completed, call.missed, etc.)",
+                    "✅ Client can filter events by call_status and project_ids",
+                    "✅ Payload is delivered with HMAC-SHA256 signature in the X-Comdesk-Signature header",
+                    "✅ Payload includes event_id (UUID v4) and timestamp (Unix epoch) for replay protection",
+                    "🔒 Requires scope webhooks:manage",
+                    "🔒 Requires license open_api_advanced"
+                ]
+            }
+        },
+        "/api/v1/webhooks/{webhookId}": {
+            "get": {
+                "tags": [
+                    "Webhooks"
+                ],
+                "summary": "Get webhook detail",
+                "description": "Returns detailed information for a single webhook. Requires scope `webhooks:manage`.",
+                "operationId": "webhooksShow",
+                "parameters": [
+                    {
+                        "name": "webhookId",
+                        "in": "path",
+                        "description": "Webhook ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Webhook detail",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "name": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "url": {
+                                                    "type": "string",
+                                                    "format": "uri"
+                                                },
+                                                "secret_prefix": {
+                                                    "type": "string",
+                                                    "example": "whsec_ab12"
+                                                },
+                                                "events": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    }
+                                                },
+                                                "is_active": {
+                                                    "type": "boolean"
+                                                },
+                                                "last_delivered_at": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "nullable": true
+                                                },
+                                                "consecutive_failures": {
+                                                    "type": "integer",
+                                                    "example": 0
+                                                },
+                                                "created_at": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                },
+                                                "updated_at": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid API key",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Insufficient scope webhooks:manage or license open_api_advanced",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Webhook not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limit exceeded",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Webhooks"
+                ],
+                "summary": "Update webhook",
+                "description": "Updates an existing webhook. Requires scope `webhooks:manage`.",
+                "operationId": "webhooksUpdate",
+                "parameters": [
+                    {
+                        "name": "webhookId",
+                        "in": "path",
+                        "description": "Webhook ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "url": {
+                                        "type": "string",
+                                        "format": "uri",
+                                        "nullable": true
+                                    },
+                                    "events": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        },
+                                        "nullable": true
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Webhook updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "name": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "url": {
+                                                    "type": "string",
+                                                    "format": "uri"
+                                                },
+                                                "secret_prefix": {
+                                                    "type": "string",
+                                                    "example": "whsec_ab12"
+                                                },
+                                                "events": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    }
+                                                },
+                                                "is_active": {
+                                                    "type": "boolean"
+                                                },
+                                                "last_delivered_at": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "nullable": true
+                                                },
+                                                "consecutive_failures": {
+                                                    "type": "integer",
+                                                    "example": 0
+                                                },
+                                                "created_at": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                },
+                                                "updated_at": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid API key",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Insufficient scope webhooks:manage or license open_api_advanced",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Webhook not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limit exceeded",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Webhooks"
+                ],
+                "summary": "Delete webhook",
+                "description": "Permanently deletes a webhook. Requires scope `webhooks:manage`.",
+                "operationId": "webhooksDestroy",
+                "parameters": [
+                    {
+                        "name": "webhookId",
+                        "in": "path",
+                        "description": "Webhook ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Webhook deleted"
+                    },
+                    "401": {
+                        "description": "Invalid API key",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Insufficient scope webhooks:manage or license open_api_advanced",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Webhook not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limit exceeded",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/webhooks/{webhookId}/test": {
+            "post": {
+                "tags": [
+                    "Webhooks"
+                ],
+                "summary": "Test webhook connection",
+                "description": "Sends a test payload to a registered webhook and reports the result. Requires scope `webhooks:manage`.",
+                "operationId": "webhooksTest",
+                "parameters": [
+                    {
+                        "name": "webhookId",
+                        "in": "path",
+                        "description": "Webhook ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Test result",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                },
+                                                "http_status": {
+                                                    "type": "integer",
+                                                    "example": 200
+                                                },
+                                                "response_time_ms": {
+                                                    "type": "integer",
+                                                    "example": 142
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid API key",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Insufficient scope webhooks:manage or license open_api_advanced",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Webhook not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limit exceeded",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "ErrorResponse": {
+                "required": [
+                    "error"
+                ],
+                "properties": {
+                    "error": {
+                        "required": [
+                            "code",
+                            "message"
+                        ],
+                        "properties": {
+                            "code": {
+                                "type": "string",
+                                "example": "invalid_api_key"
+                            },
+                            "message": {
+                                "type": "string",
+                                "example": "The provided API key is invalid or has been revoked."
+                            },
+                            "details": {
+                                "example": null,
+                                "nullable": true
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "ValidationErrorResponse": {
+                "properties": {
+                    "error": {
+                        "properties": {
+                            "code": {
+                                "type": "string",
+                                "example": "validation_error"
+                            },
+                            "message": {
+                                "type": "string",
+                                "example": "The given data was invalid."
+                            },
+                            "details": {
+                                "type": "object",
+                                "example": {
+                                    "phone_number": [
+                                        "The phone number field is required."
+                                    ]
+                                }
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "PaginationMeta": {
+                "properties": {
+                    "current_page": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "per_page": {
+                        "type": "integer",
+                        "example": 50
+                    },
+                    "total": {
+                        "type": "integer",
+                        "example": 128
+                    },
+                    "last_page": {
+                        "type": "integer",
+                        "example": 3
+                    }
+                },
+                "type": "object"
+            },
+            "SpeechAnalysis": {
+                "properties": {
+                    "talk_ratio": {
+                        "description": "Agent talk ratio (0–1)",
+                        "type": "number",
+                        "format": "float",
+                        "example": 0.45
+                    },
+                    "speech_speed": {
+                        "description": "Speech speed (chars/sec)",
+                        "type": "number",
+                        "format": "float",
+                        "example": 5.2
+                    },
+                    "filler_count": {
+                        "description": "Number of filler words",
+                        "type": "integer",
+                        "example": 3
+                    },
+                    "silence_ratio": {
+                        "description": "Silence ratio",
+                        "type": "number",
+                        "format": "float",
+                        "example": 0.08
+                    },
+                    "overlap_count": {
+                        "description": "Number of speech overlaps",
+                        "type": "integer",
+                        "example": 2
+                    },
+                    "positive_ratio": {
+                        "description": "Positive sentiment ratio",
+                        "type": "number",
+                        "format": "float",
+                        "example": 0.72
+                    },
+                    "question_count": {
+                        "description": "Number of questions asked",
+                        "type": "integer",
+                        "example": 8
+                    },
+                    "rally_count": {
+                        "description": "Number of turn exchanges",
+                        "type": "integer",
+                        "example": 15
+                    }
+                },
+                "type": "object",
+                "nullable": true
+            },
+            "CallHistoryItem": {
+                "properties": {
+                    "call_id": {
+                        "type": "string",
+                        "example": "call_abc123"
+                    },
+                    "call_type": {
+                        "type": "string",
+                        "example": "outbound",
+                        "enum": [
+                            "outbound",
+                            "inbound"
+                        ]
+                    },
+                    "status": {
+                        "type": "string",
+                        "example": "connected"
+                    },
+                    "phone_number": {
+                        "type": "string",
+                        "example": "09012345678"
+                    },
+                    "caller_number": {
+                        "type": "string",
+                        "example": "0312345678"
+                    },
+                    "staff_id": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "staff_name": {
+                        "type": "string",
+                        "example": "Tanaka Taro"
+                    },
+                    "project_id": {
+                        "type": "integer",
+                        "example": 456
+                    },
+                    "project_name": {
+                        "type": "string",
+                        "example": "Sales Project A"
+                    },
+                    "customer_id": {
+                        "type": "integer",
+                        "example": 78901,
+                        "nullable": true
+                    },
+                    "customer_name": {
+                        "type": "string",
+                        "example": "Test Corporation",
+                        "nullable": true
+                    },
+                    "started_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2026-03-10T10:00:00+09:00"
+                    },
+                    "ended_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "duration_seconds": {
+                        "type": "integer",
+                        "example": 330
+                    },
+                    "memo": {
+                        "type": "string",
+                        "example": "Appointment secured",
+                        "nullable": true
+                    },
+                    "recall_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "transcription": {
+                        "description": "Speech-to-text transcription",
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "summary": {
+                        "description": "AI-generated call summary",
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "speech_analysis": {
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/SpeechAnalysis"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "recording_url": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true
+                    },
+                    "external_id": {
+                        "type": "string",
+                        "example": "SF-LEAD-001",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            }
+        },
+        "securitySchemes": {
+            "BearerAuth": {
+                "type": "http",
+                "description": "API key from the api_keys table. Enter without the 'Bearer ' prefix.",
+                "scheme": "bearer"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Calls",
+            "description": "Calls"
+        },
+        {
+            "name": "Customers",
+            "description": "Customers"
+        },
+        {
+            "name": "IVR",
+            "description": "IVR"
+        },
+        {
+            "name": "Reports",
+            "description": "Reports"
+        },
+        {
+            "name": "Webhooks",
+            "description": "Webhooks"
+        }
+    ]
+}

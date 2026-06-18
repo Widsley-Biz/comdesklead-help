@@ -307,20 +307,21 @@
           {
             "group": "Open API",
             "pages": [
-              "intro",
-              "quickstart",
-              "authentication",
-              "rate",
-              "file-3",
-              "webhook",
+              "developer/open-api/intro",
+              "developer/open-api/quickstart",
+              "developer/open-api/authentication",
+              "developer/open-api/rate",
+              "developer/open-api/file-3",
+              "developer/open-api/webhook",
               {
                 "group": "API-Reference",
                 "pages": [
-                  "call",
-                  "customer",
-                  "report",
-                  "webhook-api",
-                  "ivr"
+                  "developer/open-api/api-reference/call",
+                  "developer/open-api/api-reference/customer",
+                  "developer/open-api/api-reference/report",
+                  "developer/open-api/api-reference/webhook-api",
+                  "developer/open-api/api-reference/ivr",
+                  "developer/open-api/api-reference/ai-spec"
                 ]
               }
             ]

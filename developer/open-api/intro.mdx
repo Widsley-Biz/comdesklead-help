@@ -49,11 +49,11 @@ flowchart LR
 ## 前提条件
 
 - `open_api` または `open_api_advanced` ライセンスを持つ Comdesk Lead テナント。
-- テナント管理者が発行した API キー（[認証](/developer/ja/authentication) を参照）。
+- テナント管理者が発行した API キー（[認証](/developer/open-api/authentication) を参照）。
 - Webhook を使う場合：`POST` リクエストを受信できる HTTPS エンドポイント。
 
 <Note>
-  Webhook、レポート API、カスタムレート制限、IVR トリガーは **`open_api_advanced`** ライセンスが必要です。プラン比較は [レート制限とクォータ](/developer/ja/rate-limits) を参照してください。
+  Webhook、レポート API、カスタムレート制限、IVR トリガーは **`open_api_advanced`** ライセンスが必要です。プラン比較は [レート制限とクォータ](/developer/open-api/rate) を参照してください。
 </Note>
 
 ## ベース URL
@@ -71,19 +71,19 @@ https://app.comdesk.com/api/v1
 ## 次のステップ
 
 <CardGroup cols={2}>
-  <Card title="クイックスタート" icon="rocket" href="/developer/ja/quickstart">
+  <Card title="クイックスタート" icon="rocket" href="/developer/open-api/quickstart">
     5 分で最初の認証付きリクエストを実行します。
   </Card>
 
-  <Card title="認証" icon="key" href="/developer/ja/authentication">
+  <Card title="認証" icon="key" href="/developer/open-api/authentication">
     API キーの形式、Bearer ヘッダー、スコープ、IP 許可リスト。
   </Card>
 
-  <Card title="API リファレンス" icon="code" href="/developer/ja/api-reference/calls">
+  <Card title="API リファレンス" icon="code" href="/developer/open-api/api-reference/call">
     すべてのエンドポイント、パラメータ、レスポンスフィールド。
   </Card>
 
-  <Card title="Webhook" icon="bell" href="/developer/ja/webhooks">
+  <Card title="Webhook" icon="bell" href="/developer/open-api/webhook">
     イベントを購読し、署名を検証します。
   </Card>
 </CardGroup>

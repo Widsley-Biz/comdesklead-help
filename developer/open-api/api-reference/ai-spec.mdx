@@ -1,0 +1,73 @@
+---
+title: "AI開発用ダウンロード（OpenAPI仕様）"
+description: "Comdesk Lead Open API の OpenAPI 仕様ファイル（JSON / YAML）。AIコーディングツールやコード生成にそのまま読み込ませられます。"
+---
+
+Comdesk Lead Open API の仕様を **OpenAPI 3.0** 形式で配布しています。
+ChatGPT・Claude・Cursor などの AI コーディングツールや、各種コードジェネレーターにそのまま読み込ませて、クライアント実装・型定義・テストの生成に利用できます。
+
+<Info>
+  日本語版・英語版、および JSON・YAML の計4種類を用意しています。内容（エンドポイント・スキーマ）は同一で、`info.description` などの説明文の言語のみ異なります。
+</Info>
+
+## ダウンロード
+
+<CardGroup cols={2}>
+  <Card title="日本語版 (JSON)" icon="file-code" href="/developer/open-api/api-reference/forAI/api-docs-ja.json">
+    日本語の説明付き OpenAPI 仕様（JSON）
+  </Card>
+  <Card title="日本語版 (YAML)" icon="file-lines" href="/developer/open-api/api-reference/forAI/api-docs-ja.yaml">
+    日本語の説明付き OpenAPI 仕様（YAML）
+  </Card>
+  <Card title="English (JSON)" icon="file-code" href="/developer/open-api/api-reference/forAI/api-docs-en.json">
+    OpenAPI specification with English descriptions (JSON)
+  </Card>
+  <Card title="English (YAML)" icon="file-lines" href="/developer/open-api/api-reference/forAI/api-docs-en.yaml">
+    OpenAPI specification with English descriptions (YAML)
+  </Card>
+</CardGroup>
+
+<Tip>
+  どの形式を使うか迷う場合は、AIツールへの貼り付け・人間の可読性重視なら **YAML**、ツールやライブラリでパースする用途なら **JSON** がおすすめです。
+</Tip>
+
+## AIツールへの読み込み方
+
+<Steps>
+  <Step title="仕様ファイルをダウンロード">
+    上のカードから用途に合った形式（日本語/英語・JSON/YAML）をダウンロードします。
+  </Step>
+  <Step title="AIツールに渡す">
+    ダウンロードしたファイルを、チャットへの添付・プロジェクトへの配置・コンテキストへの貼り付けなどでAIツールに読み込ませます。
+  </Step>
+  <Step title="生成を依頼">
+    「この OpenAPI 仕様をもとに〇〇言語のクライアントを書いて」のように依頼すると、エンドポイント・認証・スキーマに沿った実装が得られます。
+  </Step>
+</Steps>
+
+<Accordion title="利用例（プロンプト例 / コード生成）">
+  - **クライアント生成を依頼するプロンプト例:**
+    > 添付の OpenAPI 仕様（Comdesk Lead Open API）をもとに、TypeScript の API クライアントを生成してください。認証は `Authorization: Bearer <api_key>` ヘッダーです。
+
+  - **OpenAPI Generator でコードを生成する例:**
+
+  <CodeGroup>
+  ```bash TypeScript
+  openapi-generator-cli generate \
+    -i api-docs-ja.yaml \
+    -g typescript-fetch \
+    -o ./comdesk-client
+  ```
+
+  ```bash Python
+  openapi-generator-cli generate \
+    -i api-docs-ja.yaml \
+    -g python \
+    -o ./comdesk-client
+  ```
+  </CodeGroup>
+</Accordion>
+
+<Note>
+  認証方式・エンドポイントの詳細は [認証](/developer/open-api/authentication) および各 API リファレンスページもあわせてご確認ください。
+</Note>

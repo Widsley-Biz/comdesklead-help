@@ -1,0 +1,1937 @@
+openapi: 3.0.0
+info:
+  title: Comdesk Lead Open API
+  description: '外部CRM（Salesforce、HubSpotなど）との統合のためのOpen APIです。
+
+
+    認証はAPIキーを使用し、`Authorization: Bearer <api_key>` ヘッダーで送信します。
+
+
+    APIキーはテナント管理画面から発行できます。
+
+
+    ---
+
+    🇬🇧 [English version → /api/docs/en](/api/docs/en)'
+  contact:
+    name: Comdesk デベロッパーサポート
+    email: dev@comdesk.jp
+  version: 1.0.0
+servers:
+- url: /
+  description: 現在のサーバー
+- url: https://dl.comdesk.jp
+  description: 開発環境 (dl)
+- url: https://sl.comdesk.jp
+  description: ステージング (sl)
+- url: https://pl.comdesk.jp
+  description: 本番環境 (pl)
+paths:
+  /api/v1/calls/initiate:
+    post:
+      tags:
+      - 通話（Calls）
+      summary: アウトバウンドコール発信（Click to Call）
+      description: CRMから外線発信を開始します。発信追跡用のcall_idを返します。スコープ `calls:initiate` が必要です。
+      operationId: callsInitiate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+              - phone_number
+              - staff_id
+              - project_id
+              properties:
+                phone_number:
+                  description: 発信先電話番号（E.164形式または日本国内形式）
+                  type: string
+                  pattern: ^[0-9\-\+]{7,20}$
+                  example: 09012345678
+                staff_id:
+                  description: 発信するスタッフのID
+                  type: integer
+                  example: 123
+                project_id:
+                  description: 通話を記録するプロジェクトID
+                  type: integer
+                  example: 456
+                external_id:
+                  description: CRM側のレコードIDとの紐付け用
+                  type: string
+                  example: SF-LEAD-001
+                  nullable: true
+                  maxLength: 255
+                metadata:
+                  description: CRMからの任意メタデータ（保存されますが処理されません）
+                  type: object
+                  example:
+                    crm_url: https://crm.example.com/leads/001
+                  nullable: true
+              type: object
+      responses:
+        '200':
+          description: 発信が正常に開始されました
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    properties:
+                      call_id:
+                        type: string
+                        example: call_abc123
+                      status:
+                        type: string
+                        example: initiating
+                      phone_number:
+                        type: string
+                        example: 09012345678
+                      staff_id:
+                        type: integer
+                        example: 123
+                      initiated_at:
+                        type: string
+                        format: date-time
+                        example: '2026-03-10T10:00:00+09:00'
+                    type: object
+                type: object
+        '401':
+          description: APIキーが無効です
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: スコープ calls:initiate が不足しています
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: external_idが重複しています
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '429':
+          description: レート制限超過
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+      - BearerAuth: []
+      x-acceptance-criteria:
+      - ✅ phone_number、staff_id、project_idを送信して外線発信を開始できること
+      - ✅ CRMレコードとの紐付け用にexternal_idを含めることができること
+      - ✅ レスポンス200にcall_idとstatus initiatingが含まれること
+      - ❌ phone_number、staff_id、project_idが無効な場合、HTTP 422で拒否されること
+      - ❌ external_idが重複する場合（同じexternal_idのアクティブな通話が存在）、HTTP 409で拒否されること
+      - 🔒 スコープ calls:initiate が必要
+      - 🪪 X-Request-IDヘッダーがレスポンスにエコーされること
+  /api/v1/calls:
+    get:
+      tags:
+      - 通話（Calls）
+      summary: 通話履歴一覧取得
+      description: フィルタとページネーション付きで通話履歴を取得します。日付範囲は最大31日間です。スコープ `calls:read` が必要です。
+      operationId: callsList
+      parameters:
+      - name: from
+        in: query
+        description: 開始日（YYYY-MM-DD）。最大180日前まで。
+        required: true
+        schema:
+          type: string
+          format: date
+          example: '2026-03-01'
+      - name: to
+        in: query
+        description: 終了日（YYYY-MM-DD）。fromから最大31日間。
+        required: true
+        schema:
+          type: string
+          format: date
+          example: '2026-03-31'
+      - name: project_id
+        in: query
+        description: プロジェクトIDでフィルタ
+        required: false
+        schema:
+          type: integer
+      - name: staff_id
+        in: query
+        description: スタッフIDでフィルタ
+        required: false
+        schema:
+          type: integer
+      - name: call_type
+        in: query
+        description: 通話種別でフィルタ
+        required: false
+        schema:
+          type: string
+          enum:
+          - outbound
+          - inbound
+      - name: status
+        in: query
+        description: ステータスでフィルタ（カンマ区切り）
+        required: false
+        schema:
+          type: string
+          example: connected,no_answer
+      - name: phone_number
+        in: query
+        description: 電話番号の部分一致検索
+        required: false
+        schema:
+          type: string
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 1
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 50
+          maximum: 200
+      - name: sort
+        in: query
+        required: false
+        schema:
+          type: string
+          default: started_at
+          enum:
+          - started_at
+          - duration
+      - name: order
+        in: query
+        required: false
+        schema:
+          type: string
+          default: desc
+          enum:
+          - asc
+          - desc
+      responses:
+        '200':
+          description: 通話履歴一覧
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CallHistoryItem'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMeta'
+                type: object
+        '401':
+          description: APIキーが無効です
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: スコープ calls:read が不足しています
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: 日付範囲が31日超、またはパラメータが無効
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '429':
+          description: レート制限超過
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+      - BearerAuth: []
+      x-acceptance-criteria:
+      - ✅ 日付範囲フィルタ（from、to）、プロジェクト、スタッフ、ステータスで通話履歴を取得できること
+      - ❌ 日付範囲は1リクエストあたり最大31日間。超過するとHTTP 422を返すこと
+      - ✅ ページネーション対応（page、per_page 最大200）
+      - ✅ レスポンスにtranscription、summary、speech_analysis、recording_url、external_idが含まれること
+      - 🔒 スコープ calls:read が必要
+  /api/v1/calls/{callId}:
+    get:
+      tags:
+      - 通話（Calls）
+      summary: 通話詳細取得
+      description: 文字起こし、要約、音声解析を含む通話の詳細情報を取得します。スコープ `calls:read` が必要です。
+      operationId: callsDetail
+      parameters:
+      - name: callId
+        in: path
+        description: 通話ID
+        required: true
+        schema:
+          type: integer
+          example: 12345
+      responses:
+        '200':
+          description: 通話詳細
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CallHistoryItem'
+                type: object
+        '401':
+          description: APIキーが無効です
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: スコープ calls:read が不足しています
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: このテナント内に通話が見つかりません
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: レート制限超過
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+      - BearerAuth: []
+      x-acceptance-criteria:
+      - ✅ callIdで単一通話の全詳細を取得できること
+      - ✅ transcription、summary、speech_analysisを含むすべてのフィールドがレスポンスに含まれること
+      - ❌ 同一テナント内でcallIdが見つからない場合、HTTP 404を返すこと
+      - 🔒 スコープ calls:read が必要
+  /api/v1/customers:
+    get:
+      tags:
+      - 顧客（Customers）
+      summary: 顧客一覧取得
+      description: フィルタとページネーション付きで顧客一覧を取得します。スコープ `customers:read` が必要です。
+      operationId: customersList
+      parameters:
+      - name: project_id
+        in: query
+        description: プロジェクトIDでフィルタ
+        required: false
+        schema:
+          type: integer
+      - name: keyword
+        in: query
+        description: 名前・電話番号の部分一致検索
+        required: false
+        schema:
+          type: string
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 1
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 50
+          maximum: 200
+      responses:
+        '200':
+          description: 顧客一覧
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    type: array
+                    items:
+                      properties:
+                        customer_id:
+                          type: integer
+                          example: 78901
+                        external_id:
+                          type: string
+                          example: CRM-LEAD-001
+                          nullable: true
+                        name:
+                          type: string
+                          example: 株式会社テスト
+                        tel1:
+                          type: string
+                          example: 0312345678
+                        project_id:
+                          type: integer
+                          example: 456
+                      type: object
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMeta'
+                type: object
+        '401':
+          description: APIキーが無効です
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: スコープ customers:read が不足しています
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: レート制限超過
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+      - BearerAuth: []
+    post:
+      tags:
+      - 顧客（Customers）
+      summary: 顧客登録
+      description: 新規顧客を登録します。`external_id` はCRM側レコードとの紐付けに使用します。スコープ `customers:write`
+        が必要です。
+      operationId: customersCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+              - project_id
+              - name
+              properties:
+                project_id:
+                  type: integer
+                  example: 456
+                external_id:
+                  type: string
+                  example: CRM-LEAD-001
+                  nullable: true
+                  maxLength: 255
+                name:
+                  type: string
+                  example: 株式会社テスト
+                  maxLength: 255
+                name_kana:
+                  type: string
+                  example: カブシキガイシャテスト
+                  nullable: true
+                  maxLength: 255
+                tel1:
+                  type: string
+                  example: 0312345678
+                  nullable: true
+                  maxLength: 30
+                tel2:
+                  type: string
+                  example: 09012345678
+                  nullable: true
+                prefecture:
+                  type: string
+                  example: 東京都
+                  nullable: true
+                address1:
+                  type: string
+                  example: 渋谷区渋谷1-1-1
+                  nullable: true
+                industry:
+                  type: string
+                  example: IT
+                  nullable: true
+                employee_scale:
+                  type: string
+                  example: 100-299
+                  nullable: true
+                custom_fields:
+                  type: object
+                  example:
+                    field_1: カスタム値
+                  nullable: true
+              type: object
+      responses:
+        '201':
+          description: 顧客が正常に登録されました
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    properties:
+                      customer_id:
+                        type: integer
+                        example: 78901
+                      external_id:
+                        type: string
+                        example: CRM-LEAD-001
+                        nullable: true
+                      name:
+                        type: string
+                        example: 株式会社テスト
+                      project_id:
+                        type: integer
+                        example: 456
+                      created_at:
+                        type: string
+                        format: date-time
+                    type: object
+                type: object
+        '401':
+          description: APIキーが無効です
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: スコープ customers:write が不足しています
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 同一プロジェクト内でexternal_idが重複しています
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '429':
+          description: レート制限超過
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+      - BearerAuth: []
+      x-acceptance-criteria:
+      - ✅ CRM紐付け用のexternal_idを使って新規顧客を登録できること
+      - ✅ レスポンス201に、後続リクエスト用にCRMに保存可能なcustomer_idが含まれること
+      - ❌ 同一プロジェクト内でexternal_idが重複する場合、HTTP 409を返すこと
+      - 🔒 スコープ customers:write が必要
+  /api/v1/customers/bulk:
+    post:
+      tags:
+      - 顧客（Customers）
+      summary: 顧客一括登録
+      description: 1リクエストで最大500件の顧客を一括登録します。スコープ `customers:write` が必要です。
+      operationId: customersBulkCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+              - customers
+              properties:
+                customers:
+                  type: array
+                  items:
+                    required:
+                    - project_id
+                    - name
+                    properties:
+                      project_id:
+                        type: integer
+                        example: 456
+                      external_id:
+                        type: string
+                        nullable: true
+                        maxLength: 255
+                      name:
+                        type: string
+                        example: 株式会社テスト
+                        maxLength: 255
+                      tel1:
+                        type: string
+                        example: 0312345678
+                        nullable: true
+                        maxLength: 30
+                    type: object
+                  maxItems: 500
+              type: object
+      responses:
+        '201':
+          description: 一括登録完了
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    properties:
+                      created_count:
+                        type: integer
+                        example: 97
+                      skipped_count:
+                        description: external_id重複によりスキップされた件数
+                        type: integer
+                        example: 3
+                      errors:
+                        description: レコードごとのエラー詳細
+                        type: array
+                        items:
+                          type: object
+                    type: object
+                type: object
+        '401':
+          description: APIキーが無効です
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: スコープ customers:write が不足しています
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: 配列が空または500件超
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '429':
+          description: レート制限超過
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+      - BearerAuth: []
+  /api/v1/customers/{customerId}:
+    get:
+      tags:
+      - 顧客（Customers）
+      summary: 顧客詳細取得
+      description: 指定した顧客の詳細情報を取得します。スコープ `customers:read` が必要です。
+      operationId: customersShow
+      parameters:
+      - name: customerId
+        in: path
+        description: 顧客ID
+        required: true
+        schema:
+          type: integer
+          example: 78901
+      responses:
+        '200':
+          description: 顧客詳細
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    properties:
+                      customer_id:
+                        type: integer
+                        example: 78901
+                      external_id:
+                        type: string
+                        example: CRM-LEAD-001
+                        nullable: true
+                      name:
+                        type: string
+                        example: 株式会社テスト
+                      name_kana:
+                        type: string
+                        nullable: true
+                      tel1:
+                        type: string
+                        example: 0312345678
+                      tel2:
+                        type: string
+                        nullable: true
+                      prefecture:
+                        type: string
+                        nullable: true
+                      address1:
+                        type: string
+                        nullable: true
+                      industry:
+                        type: string
+                        nullable: true
+                      employee_scale:
+                        type: string
+                        nullable: true
+                      custom_fields:
+                        type: object
+                        nullable: true
+                      project_id:
+                        type: integer
+                        example: 456
+                      created_at:
+                        type: string
+                        format: date-time
+                      updated_at:
+                        type: string
+                        format: date-time
+                    type: object
+                type: object
+        '401':
+          description: APIキーが無効です
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: スコープ customers:read が不足しています
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 顧客が見つかりません
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: レート制限超過
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+      - BearerAuth: []
+    put:
+      tags:
+      - 顧客（Customers）
+      summary: 顧客情報更新
+      description: 既存の顧客情報を更新します。指定しないフィールドは変更されません。スコープ `customers:write` が必要です。
+      operationId: customersUpdate
+      parameters:
+      - name: customerId
+        in: path
+        description: 顧客ID
+        required: true
+        schema:
+          type: integer
+          example: 78901
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                name:
+                  type: string
+                  example: 株式会社テスト（更新）
+                  nullable: true
+                name_kana:
+                  type: string
+                  nullable: true
+                tel1:
+                  type: string
+                  example: 0312345679
+                  nullable: true
+                tel2:
+                  type: string
+                  nullable: true
+                prefecture:
+                  type: string
+                  nullable: true
+                address1:
+                  type: string
+                  nullable: true
+                industry:
+                  type: string
+                  nullable: true
+                employee_scale:
+                  type: string
+                  nullable: true
+                custom_fields:
+                  type: object
+                  nullable: true
+              type: object
+      responses:
+        '200':
+          description: 顧客情報が更新されました
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    properties:
+                      customer_id:
+                        type: integer
+                        example: 78901
+                      name:
+                        type: string
+                        example: 株式会社テスト（更新）
+                      updated_at:
+                        type: string
+                        format: date-time
+                    type: object
+                type: object
+        '401':
+          description: APIキーが無効です
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: スコープ customers:write が不足しています
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 顧客が見つかりません
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '429':
+          description: レート制限超過
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+      - BearerAuth: []
+  /api/v1/ivr/trigger:
+    post:
+      tags:
+      - IVR
+      summary: IVR自動発信をトリガー
+      description: 指定した電話番号への IVR 自動発信をキューに追加します。コールは PBX キューエンドポイント経由で非同期にディスパッチされます。追跡用の
+        session_id を返します。スコープ `ivr:trigger` が必要です。
+      operationId: ivrTriggerJa
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+              - phone_number
+              - project_id
+              properties:
+                phone_number:
+                  description: 発信先電話番号（数字・ハイフン・プラス記号、7〜20文字）
+                  type: string
+                  pattern: ^[0-9\-\+]{7,20}$
+                  example: 09012345678
+                project_id:
+                  description: 通話を記録するプロジェクト ID（呼び出し元テナントに属するもの）
+                  type: integer
+                  example: 1
+                queue_id:
+                  description: ルーティング先ワークグループキュー ID（呼び出し元テナントに属するもの、任意）
+                  type: integer
+                  example: 7
+                  nullable: true
+                external_id:
+                  description: 重複排除・紐付け用 CRM レコード ID（任意）
+                  type: string
+                  example: SF-LEAD-001
+                  nullable: true
+                  maxLength: 255
+                metadata:
+                  description: CRM から渡す任意メタデータ（最大 1 KB、保存のみ・処理なし）
+                  type: object
+                  example:
+                    crm_url: https://crm.example.com/leads/001
+                  nullable: true
+              type: object
+      responses:
+        '200':
+          description: IVR 発信をキューに追加しました
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    properties:
+                      session_id:
+                        type: string
+                        example: ivr_12345
+                      status:
+                        type: string
+                        example: queued
+                      phone_number:
+                        type: string
+                        example: 09012345678
+                      project_id:
+                        type: integer
+                        example: 1
+                      initiated_at:
+                        type: string
+                        format: date-time
+                        example: '2026-03-10T10:00:00+09:00'
+                    type: object
+                type: object
+        '401':
+          description: API キーが無効
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: スコープ ivr:trigger が不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: external_id が重複（アクティブな IVR セッションが存在）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '429':
+          description: レート制限超過
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+      - BearerAuth: []
+  /api/v1/reports/summary:
+    get:
+      tags:
+      - レポート（Reports）
+      summary: 通話統計サマリー取得
+      description: 指定した期間の通話統計を集計して返します。最大31日間、最大180日前まで。スコープ `reports:read` とライセンス
+        `open_api_advanced` が必要です。
+      operationId: reportsSummary
+      parameters:
+      - name: from
+        in: query
+        description: 開始日（YYYY-MM-DD）
+        required: true
+        schema:
+          type: string
+          format: date
+          example: '2026-05-01'
+      - name: to
+        in: query
+        description: 終了日（YYYY-MM-DD）
+        required: true
+        schema:
+          type: string
+          format: date
+          example: '2026-05-14'
+      - name: project_id
+        in: query
+        description: プロジェクトIDでフィルタ
+        required: false
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: 集計統計データ
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    properties:
+                      from:
+                        type: string
+                        format: date
+                        example: '2026-05-01'
+                      to:
+                        type: string
+                        format: date
+                        example: '2026-05-14'
+                      total_calls:
+                        type: integer
+                        example: 1250
+                      total_out_calls:
+                        type: integer
+                        example: 980
+                      total_out_connected:
+                        type: integer
+                        example: 412
+                      total_in_calls:
+                        type: integer
+                        example: 270
+                      total_in_connected:
+                        type: integer
+                        example: 198
+                      connection_rate:
+                        description: アウトバウンド接続率（%）
+                        type: number
+                        format: float
+                        example: 42.04
+                      total_duration_seconds:
+                        type: integer
+                        example: 183600
+                      total_mybox:
+                        type: integer
+                        example: 87
+                      total_appoints:
+                        type: integer
+                        example: 34
+                    type: object
+                type: object
+        '401':
+          description: APIキーが無効です
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: スコープ reports:read またはライセンス open_api_advanced が不足しています
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: 31日超、from が180日以上前、またはパラメータ無効
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '429':
+          description: レート制限超過
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+      - BearerAuth: []
+  /api/v1/reports/calls:
+    get:
+      tags:
+      - レポート（Reports）
+      summary: 通話明細レポート取得
+      description: スタッフ別・プロジェクト別の通話明細を取得します。スコープ `reports:read` とライセンス `open_api_advanced`
+        が必要です。
+      operationId: reportsCalls
+      parameters:
+      - name: from
+        in: query
+        description: 開始日（YYYY-MM-DD）
+        required: true
+        schema:
+          type: string
+          format: date
+          example: '2026-05-01'
+      - name: to
+        in: query
+        description: 終了日（YYYY-MM-DD）
+        required: true
+        schema:
+          type: string
+          format: date
+          example: '2026-05-14'
+      - name: project_id
+        in: query
+        description: プロジェクトIDでフィルタ
+        required: false
+        schema:
+          type: integer
+      - name: staff_id
+        in: query
+        description: スタッフIDでフィルタ
+        required: false
+        schema:
+          type: integer
+      - name: group_by
+        in: query
+        description: 集計単位
+        required: false
+        schema:
+          type: string
+          default: staff
+          enum:
+          - staff
+          - project
+          - day
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 1
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 50
+          maximum: 200
+      responses:
+        '200':
+          description: 通話明細レポート
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMeta'
+                type: object
+        '401':
+          description: APIキーが無効です
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: スコープ reports:read またはライセンス open_api_advanced が不足しています
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: 31日超またはパラメータ無効
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '429':
+          description: レート制限超過
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+      - BearerAuth: []
+  /api/v1/reports/users:
+    get:
+      tags:
+      - レポート（Reports）
+      summary: ユーザー別レポート取得
+      description: スタッフ別の通話パフォーマンスレポートを取得します。スコープ `reports:read` とライセンス `open_api_advanced`
+        が必要です。
+      operationId: reportsUsers
+      parameters:
+      - name: from
+        in: query
+        description: 開始日（YYYY-MM-DD）
+        required: true
+        schema:
+          type: string
+          format: date
+          example: '2026-05-01'
+      - name: to
+        in: query
+        description: 終了日（YYYY-MM-DD）
+        required: true
+        schema:
+          type: string
+          format: date
+          example: '2026-05-14'
+      - name: project_id
+        in: query
+        description: プロジェクトIDでフィルタ
+        required: false
+        schema:
+          type: integer
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 1
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 50
+          maximum: 200
+      responses:
+        '200':
+          description: ユーザー別レポート
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    type: array
+                    items:
+                      properties:
+                        staff_id:
+                          type: integer
+                          example: 123
+                        staff_name:
+                          type: string
+                          example: 田中太郎
+                        total_calls:
+                          type: integer
+                          example: 85
+                        connected_calls:
+                          type: integer
+                          example: 32
+                        connection_rate:
+                          type: number
+                          format: float
+                          example: 37.6
+                        total_duration_seconds:
+                          type: integer
+                          example: 12600
+                        avg_duration_seconds:
+                          type: integer
+                          example: 148
+                      type: object
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMeta'
+                type: object
+        '401':
+          description: APIキーが無効です
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: スコープ reports:read またはライセンス open_api_advanced が不足しています
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: 31日超またはパラメータ無効
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '429':
+          description: レート制限超過
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+      - BearerAuth: []
+  /api/v1/webhooks:
+    get:
+      tags:
+      - Webhook
+      summary: Webhook一覧取得
+      description: 登録済みのWebhook一覧を取得します。スコープ `webhooks:manage` が必要です。
+      operationId: webhooksList
+      responses:
+        '200':
+          description: Webhook一覧
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    type: array
+                    items:
+                      properties:
+                        id:
+                          type: integer
+                          example: 1
+                        name:
+                          type: string
+                          nullable: true
+                        url:
+                          type: string
+                          format: uri
+                        secret_prefix:
+                          type: string
+                          example: whsec_ab12
+                        events:
+                          type: array
+                          items:
+                            type: string
+                        is_active:
+                          type: boolean
+                        last_delivered_at:
+                          type: string
+                          format: date-time
+                          nullable: true
+                        consecutive_failures:
+                          type: integer
+                          example: 0
+                        created_at:
+                          type: string
+                          format: date-time
+                        updated_at:
+                          type: string
+                          format: date-time
+                      type: object
+                type: object
+        '401':
+          description: APIキーが無効です
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: スコープ webhooks:manage またはライセンス open_api_advanced が不足しています
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: レート制限超過
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+      - BearerAuth: []
+    post:
+      tags:
+      - Webhook
+      summary: Webhook登録
+      description: Comdeckイベントを受信するエンドポイントURLを登録します。ペイロードは `X-Comdesk-Signature` ヘッダーにHMAC-SHA256署名付きで送信されます。スコープ
+        `webhooks:manage` とライセンス `open_api_advanced` が必要です。
+      operationId: webhooksCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+              - url
+              - events
+              properties:
+                url:
+                  type: string
+                  format: uri
+                  example: https://hooks.example.com/comdesk
+                events:
+                  type: array
+                  items:
+                    type: string
+                    enum:
+                    - call.completed
+                    - call.missed
+                    - call.started
+                    - customer.created
+                    - customer.updated
+                    - transcription.completed
+                    - summary.completed
+                  example:
+                  - call.completed
+                  - call.missed
+                filters:
+                  properties:
+                    call_status:
+                      type: array
+                      items:
+                        type: string
+                      example:
+                      - missed_call
+                      - no_answer
+                    project_ids:
+                      type: array
+                      items:
+                        type: integer
+                      example:
+                      - 456
+                      - 789
+                  type: object
+                  nullable: true
+                is_enabled:
+                  type: boolean
+                  example: true
+                label:
+                  type: string
+                  example: Slack通知 — 不在着信
+              type: object
+      responses:
+        '201':
+          description: Webhookが正常に登録されました
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      name:
+                        type: string
+                        example: Slack通知
+                        nullable: true
+                      url:
+                        type: string
+                        format: uri
+                      secret:
+                        description: X-Comdesk-Signature検証用のHMACシークレット。登録時のみ表示されます。
+                        type: string
+                        example: whsec_xxx
+                      secret_prefix:
+                        description: シークレットの先頭12文字（識別用）
+                        type: string
+                        example: whsec_ab12
+                      events:
+                        type: array
+                        items:
+                          type: string
+                      is_active:
+                        type: boolean
+                      created_at:
+                        type: string
+                        format: date-time
+                      message:
+                        type: string
+                        example: このシークレットは今すぐ保存してください。後から取得することはできません。
+                    type: object
+                type: object
+        '401':
+          description: APIキーが無効です
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: スコープ webhooks:manage またはライセンス open_api_advanced が不足しています
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: URLが無効またはeventsが空
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '429':
+          description: レート制限超過
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+      - BearerAuth: []
+      x-acceptance-criteria:
+      - ✅ 特定イベント（call.completed、call.missedなど）を受信するURLエンドポイントを登録できること
+      - ✅ call_statusとproject_idsでイベントをフィルタできること
+      - ✅ ペイロードがX-Comdesk-SignatureヘッダーにHMAC-SHA256署名付きで配信されること
+      - ✅ リプレイ保護のためevent_id（UUID v4）とtimestamp（Unixエポック）がペイロードに含まれること
+      - 🔒 スコープ webhooks:manage が必要
+      - 🔒 ライセンス open_api_advanced が必要
+  /api/v1/webhooks/{webhookId}:
+    get:
+      tags:
+      - Webhook
+      summary: Webhook詳細取得
+      description: 指定したWebhookの詳細情報を取得します。スコープ `webhooks:manage` が必要です。
+      operationId: webhooksShow
+      parameters:
+      - name: webhookId
+        in: path
+        description: WebhookID
+        required: true
+        schema:
+          type: integer
+          example: 1
+      responses:
+        '200':
+          description: Webhook詳細
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      name:
+                        type: string
+                        nullable: true
+                      url:
+                        type: string
+                        format: uri
+                      secret_prefix:
+                        type: string
+                        example: whsec_ab12
+                      events:
+                        type: array
+                        items:
+                          type: string
+                      is_active:
+                        type: boolean
+                      last_delivered_at:
+                        type: string
+                        format: date-time
+                        nullable: true
+                      consecutive_failures:
+                        type: integer
+                        example: 0
+                      created_at:
+                        type: string
+                        format: date-time
+                      updated_at:
+                        type: string
+                        format: date-time
+                    type: object
+                type: object
+        '401':
+          description: APIキーが無効です
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: スコープ webhooks:manage またはライセンス open_api_advanced が不足しています
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Webhookが見つかりません
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: レート制限超過
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+      - BearerAuth: []
+    put:
+      tags:
+      - Webhook
+      summary: Webhook更新
+      description: 既存のWebhookを更新します。スコープ `webhooks:manage` が必要です。
+      operationId: webhooksUpdate
+      parameters:
+      - name: webhookId
+        in: path
+        description: WebhookID
+        required: true
+        schema:
+          type: integer
+          example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                name:
+                  type: string
+                  nullable: true
+                url:
+                  type: string
+                  format: uri
+                  nullable: true
+                events:
+                  type: array
+                  items:
+                    type: string
+                  nullable: true
+                is_active:
+                  type: boolean
+                  nullable: true
+              type: object
+      responses:
+        '200':
+          description: Webhookが更新されました
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      name:
+                        type: string
+                        nullable: true
+                      url:
+                        type: string
+                        format: uri
+                      secret_prefix:
+                        type: string
+                        example: whsec_ab12
+                      events:
+                        type: array
+                        items:
+                          type: string
+                      is_active:
+                        type: boolean
+                      last_delivered_at:
+                        type: string
+                        format: date-time
+                        nullable: true
+                      consecutive_failures:
+                        type: integer
+                        example: 0
+                      created_at:
+                        type: string
+                        format: date-time
+                      updated_at:
+                        type: string
+                        format: date-time
+                    type: object
+                type: object
+        '401':
+          description: APIキーが無効です
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: スコープ webhooks:manage またはライセンス open_api_advanced が不足しています
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Webhookが見つかりません
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '429':
+          description: レート制限超過
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+      - BearerAuth: []
+    delete:
+      tags:
+      - Webhook
+      summary: Webhook削除
+      description: Webhookを削除します。スコープ `webhooks:manage` が必要です。
+      operationId: webhooksDestroy
+      parameters:
+      - name: webhookId
+        in: path
+        description: WebhookID
+        required: true
+        schema:
+          type: integer
+          example: 1
+      responses:
+        '204':
+          description: Webhookが削除されました
+        '401':
+          description: APIキーが無効です
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: スコープ webhooks:manage またはライセンス open_api_advanced が不足しています
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Webhookが見つかりません
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: レート制限超過
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+      - BearerAuth: []
+  /api/v1/webhooks/{webhookId}/test:
+    post:
+      tags:
+      - Webhook
+      summary: Webhook接続テスト
+      description: 登録済みのWebhookに対してテストペイロードを送信し、接続を確認します。スコープ `webhooks:manage` が必要です。
+      operationId: webhooksTest
+      parameters:
+      - name: webhookId
+        in: path
+        description: WebhookID
+        required: true
+        schema:
+          type: integer
+          example: 1
+      responses:
+        '200':
+          description: テスト送信結果
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    properties:
+                      success:
+                        type: boolean
+                        example: true
+                      http_status:
+                        type: integer
+                        example: 200
+                      response_time_ms:
+                        type: integer
+                        example: 142
+                    type: object
+                type: object
+        '401':
+          description: APIキーが無効です
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: スコープ webhooks:manage またはライセンス open_api_advanced が不足しています
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Webhookが見つかりません
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: レート制限超過
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+      - BearerAuth: []
+components:
+  schemas:
+    ErrorResponse:
+      required:
+      - error
+      properties:
+        error:
+          required:
+          - code
+          - message
+          properties:
+            code:
+              type: string
+              example: invalid_api_key
+            message:
+              type: string
+              example: 指定されたAPIキーは無効または失効しています。
+            details:
+              example: null
+              nullable: true
+          type: object
+      type: object
+    ValidationErrorResponse:
+      properties:
+        error:
+          properties:
+            code:
+              type: string
+              example: validation_error
+            message:
+              type: string
+              example: 入力データが無効です。
+            details:
+              type: object
+              example:
+                phone_number:
+                - 電話番号は必須です。
+          type: object
+      type: object
+    PaginationMeta:
+      properties:
+        current_page:
+          type: integer
+          example: 1
+        per_page:
+          type: integer
+          example: 50
+        total:
+          type: integer
+          example: 128
+        last_page:
+          type: integer
+          example: 3
+      type: object
+    SpeechAnalysis:
+      properties:
+        talk_ratio:
+          description: エージェントの発話比率（0〜1）
+          type: number
+          format: float
+          example: 0.45
+        speech_speed:
+          description: 発話速度（文字/秒）
+          type: number
+          format: float
+          example: 5.2
+        filler_count:
+          description: フィラーワードの数
+          type: integer
+          example: 3
+        silence_ratio:
+          description: 無音比率
+          type: number
+          format: float
+          example: 0.08
+        overlap_count:
+          description: 発話の重なり回数
+          type: integer
+          example: 2
+        positive_ratio:
+          description: ポジティブ感情の比率
+          type: number
+          format: float
+          example: 0.72
+        question_count:
+          description: 質問の数
+          type: integer
+          example: 8
+        rally_count:
+          description: 発話交代の回数
+          type: integer
+          example: 15
+      type: object
+      nullable: true
+    CallHistoryItem:
+      properties:
+        call_id:
+          type: string
+          example: call_abc123
+        call_type:
+          type: string
+          example: outbound
+          enum:
+          - outbound
+          - inbound
+        status:
+          type: string
+          example: connected
+        phone_number:
+          type: string
+          example: 09012345678
+        caller_number:
+          type: string
+          example: 0312345678
+        staff_id:
+          type: integer
+          example: 123
+        staff_name:
+          type: string
+          example: 田中太郎
+        project_id:
+          type: integer
+          example: 456
+        project_name:
+          type: string
+          example: 営業プロジェクトA
+        customer_id:
+          type: integer
+          example: 78901
+          nullable: true
+        customer_name:
+          type: string
+          example: 株式会社テスト
+          nullable: true
+        started_at:
+          type: string
+          format: date-time
+          example: '2026-03-10T10:00:00+09:00'
+        ended_at:
+          type: string
+          format: date-time
+          nullable: true
+        duration_seconds:
+          type: integer
+          example: 330
+        memo:
+          type: string
+          example: 商談アポ獲得
+          nullable: true
+        recall_at:
+          type: string
+          format: date-time
+          nullable: true
+        transcription:
+          description: 音声テキスト変換
+          type: string
+          nullable: true
+        summary:
+          description: AI生成の通話要約
+          type: string
+          nullable: true
+        speech_analysis:
+          oneOf:
+          - $ref: '#/components/schemas/SpeechAnalysis'
+          nullable: true
+        recording_url:
+          type: string
+          format: uri
+          nullable: true
+        external_id:
+          type: string
+          example: SF-LEAD-001
+          nullable: true
+      type: object
+  securitySchemes:
+    BearerAuth:
+      type: http
+      description: api_keysテーブルのAPIキー。'Bearer 'プレフィックスなしで入力してください。
+      scheme: bearer
+tags:
+- name: 通話（Calls）
+  description: 通話（Calls）
+- name: 顧客（Customers）
+  description: 顧客（Customers）
+- name: IVR
+  description: IVR
+- name: レポート（Reports）
+  description: レポート（Reports）
+- name: Webhook
+  description: Webhook
