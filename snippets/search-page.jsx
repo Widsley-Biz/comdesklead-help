@@ -1,17 +1,17 @@
-import { useState } from 'react';
-
-export const SearchPage = ({ domain, apiKey, pageSize = 8, perPage = 5 }) => {
+export const SearchPage = ({ domain, apiKey, pageSize = 50, perPage = 5 }) => {
   // TODO(owner): domain と apiKey を Mintlify ダッシュボードの値に置き換えてください。
   //   domain  : your-domain.mintlify.app の identifier（app.mintlify.com の URL 末尾）
   //   apiKey  : "mint_dsc_" で始まる assistant key（public なのでクライアントに置いて安全）
-  //   pageSize: 表示件数（1〜50、既定 8）。下部の利用箇所の属性で変更します。
+  //   pageSize: API から取得する候補件数（1〜50、既定 50）。表示は関連度フィルタ後 perPage 件ずつ。
+  // 注意: Search API はスコアを返さず scoreThreshold も無視するため、常に上位 pageSize 件を返す。
+  //   そのままだと無関係な語でも結果が出るので、下記でキーワード一致による関連度フィルタを行う。
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [status, setStatus] = useState("idle"); // idle | loading | empty | error
   const [submitted, setSubmitted] = useState("");
   const [page, setPage] = useState(0); // クライアント側ページネーション
 
-  const size = Math.min(50, Math.max(1, pageSize || 8));
+  const size = Math.min(50, Math.max(1, pageSize || 50));
 
   const runSearch = async () => {
     const q = query.trim();
@@ -34,7 +34,15 @@ export const SearchPage = ({ domain, apiKey, pageSize = 8, perPage = 5 }) => {
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      const list = Array.isArray(data) ? data : [];
+      const all = Array.isArray(data) ? data : [];
+      // 関連度フィルタ: キーワードが content / title / path に実際に含まれる結果だけ残す。
+      // 全語一致(terms.every) または クエリ全体一致。無関係な語は 0 件になる。
+      const ql = q.toLowerCase();
+      const terms = ql.split(/\s+/).filter(Boolean);
+      const list = all.filter((item) => {
+        const hay = `${item.content || ""} ${(item.metadata && item.metadata.title) || ""} ${item.path || ""}`.toLowerCase();
+        return hay.includes(ql) || terms.every((t) => hay.includes(t));
+      });
       setResults(list);
       setStatus(list.length === 0 ? "empty" : "idle");
     } catch (e) {
@@ -237,7 +245,7 @@ export const SearchPage = ({ domain, apiKey, pageSize = 8, perPage = 5 }) => {
               style={{
                 display: "flex",
                 justifyContent: "center",
-                alignItems: "center", 
+                alignItems: "center",
                 gap: "16px",
                 marginTop: "8px",
               }}
