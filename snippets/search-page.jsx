@@ -243,8 +243,7 @@ export const SearchPage = ({ domain, apiKey, pageSize = 8, perPage = 5 }) => {
               }}
             >
               {navBtn("‹ 前へ", () => setPage((p) => Math.max(0, p - 1)), page === 0, false)}
-              <span style={{ fontSize: "14px", opacity: 0.7, minWidth: "80px", textAlign
-          +: "center" }}>
+              <span style={{ fontSize: "14px", opacity: 0.7, minWidth: "80px", textAlign: "center" }}>
                 ページ {page + 1} / {totalPages}
               </span>
               {navBtn("次へ ›", () => setPage((p) => Math.min(totalPages - 1, p + 1)), page >= totalPages - 1, true)}
