@@ -4,7 +4,7 @@
   style.textContent = [
     // 右上フローティング配置（ナビバー右側の領域に重ねる。DOM 注入しないので React 再描画に強い）。
     // 位置は top / right の値で微調整可能。テーマ切替ボタンに重なる場合は right を増やす。
-    '#zd-btn{position:fixed;top:13px;right:110px;z-index:9998;display:flex;align-items:center;gap:8px;background:#00BCD4;color:#fff;border:none;border-radius:20px;padding:9px 16px;font-size:14px;font-weight:600;font-family:system-ui,sans-serif;cursor:pointer;box-shadow:0 2px 8px rgba(0,188,212,.35);transition:background .2s,transform .15s}',
+    '#zd-btn{position:fixed;top:13px;right:110px;z-index:9998;display:flex;align-items:center;gap:8px;background:#00BCD4;color:#fff;border:none;border-radius:20px;padding:9px 16px;font-size:14px;font-weight:600;font-family:system-ui,sans-serif;cursor:pointer;box-shadow:0 2px 8px rgba(0,188,212,.35);transition:background .2s,transform .15s,opacity .18s}',
     '#zd-btn:hover{background:#00a5bb;transform:translateY(-1px)}',
     '#zd-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(2px)}',
     '#zd-overlay.open{display:flex}',
@@ -192,8 +192,8 @@
   setTimeout(addUI, 600);
   setTimeout(addUI, 1500);
   
-  // Assistant チャットパネルがボタン位置を覆っている間だけ お問い合わせ を隠す。
-  // パネルの正確な id に依存せず、「ボタンの真後ろにある要素が Assistant パネルか」で判定する。
+  // Assistant チャットパネルがボタン位置を覆っている間だけ お問い合わせ をフェードで隠す。
+  // パネルの id に依存せず、「ボタンの真後ろの要素が Assistant パネルか」で判定する。
   function isAssistant(el) {
     for (var n = 0; el && n < 8; n++, el = el.parentElement) {
       var id = el.id || '';
@@ -203,23 +203,40 @@
     }
     return false;
   }
+  function coveredByPanel() {
+    var btn = document.getElementById('zd-btn');
+    if (!btn) return false;
+    var r = btn.getBoundingClientRect();
+    if (!r.width) return false;
+    var pe = btn.style.pointerEvents;
+    btn.style.pointerEvents = 'none'; // elementFromPoint がボタン自身を無視するように
+    var behind = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    btn.style.pointerEvents = pe;
+    return isAssistant(behind);
+  }
   function syncBtnVisibility() {
     var btn = document.getElementById('zd-btn');
     if (!btn) return;
-    var r = btn.getBoundingClientRect();
-    if (!r.width) return;
-    btn.style.visibility = 'hidden'; // 一旦隠してボタンの「真後ろ」を取得
-    var behind = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-    btn.style.visibility = isAssistant(behind) ? 'hidden' : '';
+    var hide = coveredByPanel();
+    btn.style.opacity = hide ? '0' : '1';
+    btn.style.pointerEvents = hide ? 'none' : '';
+  }
+
+  // 開閉アニメーション中も追従するため、トリガー後しばらく毎フレーム判定する（フェードが滑らかになる）。
+  var pumpFrames = 0;
+  function pump() {
+    syncBtnVisibility();
+    if (pumpFrames > 0) { pumpFrames--; requestAnimationFrame(pump); }
+  }
+  function trigger() {
+    var idle = pumpFrames <= 0;
+    pumpFrames = 40; // 約0.6秒ぶん毎フレーム再判定
+    if (idle) requestAnimationFrame(pump);
   }
 
   syncBtnVisibility();
-  var schedT;
-  function schedule() { clearTimeout(schedT); schedT = setTimeout(syncBtnVisibility, 50); }
   if (window.MutationObserver && document.body) {
-    new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+    new MutationObserver(trigger).observe(document.body, { childList: true, subtree: true });
   }
-  // パネル開閉はクリックで起きることが多いので、クリック後にも再判定（アニメ後も）。
-  document.addEventListener('click', function () { setTimeout(syncBtnVisibility, 60); setTimeout(syncBtnVisibility, 350); });
-
+  document.addEventListener('click', trigger, true);
 }());
