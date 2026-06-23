@@ -26,6 +26,10 @@
     '#zd-sent h3{margin:0 0 8px;font-size:18px;color:#111}',
     '#zd-sent p{margin:0;color:#666;font-size:14px}',
     '#zd-error{display:none;background:#fff3f3;border:1px solid #ffcdd2;border-radius:8px;padding:10px 14px;margin-top:12px;font-size:13px;color:#c62828}',
+    // 旧フローティングボタンは非表示にし、上部「Ask Assistant」の隣に移動する
+    '#zd-btn{display:none!important}',
+    // ナビ内のお問い合わせボタン（Ask Assistant の右隣・余白だけ調整。見た目は複製で合わせる）
+    '#zd-nav-btn{margin-left:8px;cursor:pointer}',
   ].join('');
   document.head.appendChild(style);
 
@@ -176,6 +180,57 @@
   }
 
 
+  // 上部「Ask Assistant」ボタンを探す（id 優先、なければテキストで判定）
+  function findAssistantBtn() {
+    var byId = document.querySelector('#assistant-entry, [id*="assistant" i]');
+    if (byId && byId.tagName && /^(BUTTON|A)$/.test(byId.tagName)) return byId;
+    var nodes = document.querySelectorAll('button, a[role="button"]');
+    for (var i = 0; i < nodes.length; i++) {
+      var t = (nodes[i].textContent || '').trim();
+      if (t.length <= 24 && /ask\s*(assistant|ai)|アシスタント/i.test(t)) return nodes[i];
+    }
+    return null;
+  }
+
+  // 「Ask Assistant」(英語) のラベルを「AIアシスタント」に差し替える（アイコンは残す）
+  function relabelAssistant() {
+    var ref = findAssistantBtn();
+    if (!ref || ref.id === 'zd-nav-btn') return;
+    var walker = document.createTreeWalker(ref, NodeFilter.SHOW_TEXT, null, false);
+    var n;
+    while ((n = walker.nextNode())) {
+      if (/Ask\s*(Assistant|AI)/i.test(n.nodeValue)) {
+        n.nodeValue = n.nodeValue.replace(/Ask\s*(Assistant|AI)/i, 'AIアシスタント');
+      }
+    }
+  }
+
+  // Ask Assistant ボタンを複製してデザインを合わせ、その右隣にお問い合わせボタンを設置
+  function addNavBtn() {
+    if (document.getElementById('zd-nav-btn')) return;
+    var ref = findAssistantBtn();
+    if (!ref || !ref.parentNode) return;
+
+    var btn = ref.cloneNode(true);   // class を引き継いで見た目を合わせる
+    btn.id = 'zd-nav-btn';
+    btn.removeAttribute('aria-label');
+    btn.setAttribute('type', 'button');
+    btn.setAttribute('aria-label', 'お問い合わせ');
+    // 中身だけお問い合わせ用に差し替え（外側の class はそのまま＝デザイン一致）
+    btn.innerHTML =
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' +
+      '<span>お問い合わせ</span>';
+
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var b = document.getElementById('zd-btn');
+      if (b) b.click();
+    });
+
+    ref.parentNode.insertBefore(btn, ref.nextSibling);
+  }
+
   // Delegate: any <a href="#contact"> opens the contact modal (replaces legacy Zendesk request form links)
   document.addEventListener('click', function (e) {
     var a = e.target && e.target.closest ? e.target.closest('a[href$="#contact"]') : null;
@@ -187,56 +242,20 @@
     if (btn) btn.click();
   });
 
-  if (document.body) addUI();
-  setTimeout(addUI, 100);
-  setTimeout(addUI, 600);
-  setTimeout(addUI, 1500);
-  
-  // Assistant チャットパネルがボタン位置を覆っている間だけ お問い合わせ をフェードで隠す。
-  // パネルの id に依存せず、「ボタンの真後ろの要素が Assistant パネルか」で判定する。
-  function isAssistant(el) {
-    for (var n = 0; el && n < 8; n++, el = el.parentElement) {
-      var id = el.id || '';
-      var cls = (el.className && el.className.toString) ? el.className.toString() : '';
-      var al = (el.getAttribute && el.getAttribute('aria-label')) || '';
-      if (/assistant/i.test(id) || /assistant/i.test(cls) || /assistant/i.test(al)) return true;
+  function tick() { addUI(); relabelAssistant(); addNavBtn(); }
+
+  if (document.body) tick();
+  setTimeout(tick, 100);
+  setTimeout(tick, 600);
+  setTimeout(tick, 1500);
+
+  // Mintlify は SPA でナビを再描画するため、変化のたびにボタンを再設置する
+  if (window.MutationObserver) {
+    var obs = new MutationObserver(function () { relabelAssistant(); addNavBtn(); });
+    function startObs() {
+      if (document.body) obs.observe(document.body, { childList: true, subtree: true });
+      else setTimeout(startObs, 100);
     }
-    return false;
+    startObs();
   }
-  function coveredByPanel() {
-    var btn = document.getElementById('zd-btn');
-    if (!btn) return false;
-    var r = btn.getBoundingClientRect();
-    if (!r.width) return false;
-    var pe = btn.style.pointerEvents;
-    btn.style.pointerEvents = 'none'; // elementFromPoint がボタン自身を無視するように
-    var behind = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-    btn.style.pointerEvents = pe;
-    return isAssistant(behind);
-  }
-  function syncBtnVisibility() {
-    var btn = document.getElementById('zd-btn');
-    if (!btn) return;
-    var hide = coveredByPanel();
-    btn.style.opacity = hide ? '0' : '1';
-    btn.style.pointerEvents = hide ? 'none' : '';
-  }
-
-  // 開閉アニメーション中も追従するため、トリガー後しばらく毎フレーム判定する（フェードが滑らかになる）。
-  var pumpFrames = 0;
-  function pump() {
-    syncBtnVisibility();
-    if (pumpFrames > 0) { pumpFrames--; requestAnimationFrame(pump); }
-  }
-  function trigger() {
-    var idle = pumpFrames <= 0;
-    pumpFrames = 40; // 約0.6秒ぶん毎フレーム再判定
-    if (idle) requestAnimationFrame(pump);
-  }
-
-  syncBtnVisibility();
-  if (window.MutationObserver && document.body) {
-    new MutationObserver(trigger).observe(document.body, { childList: true, subtree: true });
-  }
-  document.addEventListener('click', trigger, true);
 }());
