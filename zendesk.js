@@ -2,11 +2,10 @@
 (function () {
   var style = document.createElement('style');
   style.textContent = [
-    // ナビバー内（テーマ切替ボタンの左隣）に配置する想定のスタイル。position:fixed は使わない。
-    '#zd-btn{display:flex;align-items:center;gap:6px;height:36px;padding:0 14px;margin-right:8px;background:#00BCD4;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:600;font-family:system-ui,sans-serif;cursor:pointer;white-space:nowrap;transition:background .2s}',
-    '#zd-btn:hover{background:#00a5bb}',
-    // ナビバーへ移設できなかった場合のフォールバック（右下フローティング）。
-    '#zd-btn.zd-float{position:fixed;bottom:24px;right:24px;z-index:9998;border-radius:24px;height:auto;padding:12px 20px;box-shadow:0 4px 14px rgba(0,188,212,.4)}',
+    // 右上フローティング配置（ナビバー右側の領域に重ねる。DOM 注入しないので React 再描画に強い）。
+    // 位置は top / right の値で微調整可能。テーマ切替ボタンに重なる場合は right を増やす。
+    '#zd-btn{position:fixed;top:13px;right:64px;z-index:9998;display:flex;align-items:center;gap:8px;background:#00BCD4;color:#fff;border:none;border-radius:20px;padding:9px 16px;font-size:14px;font-weight:600;font-family:system-ui,sans-serif;cursor:pointer;box-shadow:0 2px 8px rgba(0,188,212,.35);transition:background .2s,transform .15s}',
+    '#zd-btn:hover{background:#00a5bb;transform:translateY(-1px)}',
     '#zd-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(2px)}',
     '#zd-overlay.open{display:flex}',
     '#zd-modal{background:#fff;border-radius:16px;padding:32px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2);font-family:system-ui,sans-serif;position:relative;margin:16px}',
