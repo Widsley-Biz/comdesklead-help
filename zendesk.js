@@ -196,10 +196,8 @@
   function syncBtnVisibility() {
     var btn = document.getElementById('zd-btn');
     if (!btn) return;
-    var panel = document.getElementById('chat-assistant-sheet') ||
-                document.getElementById('chat-assistant-textarea') ||
-                document.getElementById('chat-assistant-input');
-    var open = !!(panel && panel.offsetParent !== null);
+    var sheet = document.getElementById('chat-assistant-sheet');
+    var open = !!(sheet && sheet.offsetParent !== null);
     btn.style.visibility = open ? 'hidden' : '';
   }
   syncBtnVisibility();
