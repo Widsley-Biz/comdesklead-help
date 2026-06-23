@@ -192,16 +192,34 @@
   setTimeout(addUI, 600);
   setTimeout(addUI, 1500);
   
-  // Assistant パネル（右側のチャット）が開いている間は お問い合わせ ボタンを隠す（重なり防止）。
+  // Assistant チャットパネルがボタン位置を覆っている間だけ お問い合わせ を隠す。
+  // パネルの正確な id に依存せず、「ボタンの真後ろにある要素が Assistant パネルか」で判定する。
+  function isAssistant(el) {
+    for (var n = 0; el && n < 8; n++, el = el.parentElement) {
+      var id = el.id || '';
+      var cls = (el.className && el.className.toString) ? el.className.toString() : '';
+      var al = (el.getAttribute && el.getAttribute('aria-label')) || '';
+      if (/assistant/i.test(id) || /assistant/i.test(cls) || /assistant/i.test(al)) return true;
+    }
+    return false;
+  }
   function syncBtnVisibility() {
     var btn = document.getElementById('zd-btn');
     if (!btn) return;
-    var sheet = document.getElementById('chat-assistant-sheet');
-    var open = !!(sheet && sheet.offsetParent !== null);
-    btn.style.visibility = open ? 'hidden' : '';
+    var r = btn.getBoundingClientRect();
+    if (!r.width) return;
+    btn.style.visibility = 'hidden'; // 一旦隠してボタンの「真後ろ」を取得
+    var behind = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    btn.style.visibility = isAssistant(behind) ? 'hidden' : '';
   }
+
   syncBtnVisibility();
+  var schedT;
+  function schedule() { clearTimeout(schedT); schedT = setTimeout(syncBtnVisibility, 50); }
   if (window.MutationObserver && document.body) {
-    new MutationObserver(syncBtnVisibility).observe(document.body, { childList: true, subtree: true });
+    new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
   }
+  // パネル開閉はクリックで起きることが多いので、クリック後にも再判定（アニメ後も）。
+  document.addEventListener('click', function () { setTimeout(syncBtnVisibility, 60); setTimeout(syncBtnVisibility, 350); });
+
 }());
