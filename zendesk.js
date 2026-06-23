@@ -191,4 +191,19 @@
   setTimeout(addUI, 100);
   setTimeout(addUI, 600);
   setTimeout(addUI, 1500);
+  
+  // Assistant パネル（右側のチャット）が開いている間は お問い合わせ ボタンを隠す（重なり防止）。
+  function syncBtnVisibility() {
+    var btn = document.getElementById('zd-btn');
+    if (!btn) return;
+    var panel = document.getElementById('chat-assistant-sheet') ||
+                document.getElementById('chat-assistant-textarea') ||
+                document.getElementById('chat-assistant-input');
+    var open = !!(panel && panel.offsetParent !== null);
+    btn.style.visibility = open ? 'hidden' : '';
+  }
+  syncBtnVisibility();
+  if (window.MutationObserver && document.body) {
+    new MutationObserver(syncBtnVisibility).observe(document.body, { childList: true, subtree: true });
+  }
 }());
