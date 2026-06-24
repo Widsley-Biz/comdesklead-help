@@ -6,7 +6,7 @@
     '#zd-btn .zd-label{display:inline}',
     '@media (max-width:1180px){#zd-btn{padding:0 10px}#zd-btn .zd-label{display:none}}',
     '#zd-btn.zd-float{position:fixed;bottom:20px;left:20px;top:auto;right:auto;z-index:9998;border-radius:20px;padding:9px 14px;box-shadow:0 2px 8px rgba(0,188,212,.35)}',
-    '#zd-btn:hover{background:#00a5bb;transform:translateY(-1px)}',
+     '#zd-btn:hover{background:#00a5bb;transform:translateY(-1px)}',
     '#zd-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(2px)}',
     '#zd-overlay.open{display:flex}',
     '#zd-modal{background:#fff;border-radius:16px;padding:32px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2);font-family:system-ui,sans-serif;position:relative;margin:16px}',
@@ -57,9 +57,9 @@
   }).join('');
 
   var html = [
-    '<button id="zd-btn">',
+    '<button id="zd-btn" style="display:none" aria-label="お問い合わせ">',
       '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
-      'お問い合わせ',
+      '<span class="zd-label">お問い合わせ</span>',
     '</button>',
     '<div id="zd-overlay">',
       '<div id="zd-modal">',
@@ -199,19 +199,15 @@
   function ensureBtn() {
     if (!zdRef) zdRef = document.getElementById('zd-btn');
     if (!zdRef) return;
-    // 既にナビバー内にあるなら触らない（検索ボックスと位置を奪い合わない）。
-    if (zdRef.closest && zdRef.closest('header, nav')) {
-      zdRef.classList.remove('zd-float');
-      zdRef.style.display = '';
-      settled = true;
-      return;
-    }
-    // 優先: Ask Assistant の隣（本番）。無ければ テーマ切替の隣（ローカル/保険、両環境に存在）。
+    // 優先: Ask Assistant（本番）。無ければ テーマ切替（ローカル/保険、両環境に存在）。
     var anchor = document.getElementById('assistant-entry') ||
                  document.querySelector('[data-component-name="theme-toggle"]') ||
                  document.querySelector('[aria-label="Toggle dark mode"]');
     if (anchor && anchor.parentNode) {
-      anchor.parentNode.insertBefore(zdRef, anchor);
+      // Ask Assistant の「右隣」に配置（検索ボックスは左隣に入るので奪い合わない）。
+      if (anchor.nextElementSibling !== zdRef) {
+        anchor.parentNode.insertBefore(zdRef, anchor.nextSibling);
+      }
       zdRef.classList.remove('zd-float');
       zdRef.style.display = '';
       settled = true;
