@@ -1,3 +1,7 @@
+#search-bar-entry,
+#search-bar-entry-mobile {
+  display: none !important;
+}
 :has(> #assistant-entry) {
   justify-content: flex-end !important;
 }
