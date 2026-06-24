@@ -13,8 +13,8 @@ export const SearchPage = ({ domain, apiKey, pageSize = 50, perPage = 5 }) => {
 
   const size = Math.min(50, Math.max(1, pageSize || 50));
 
-  const runSearch = async () => {
-    const q = query.trim();
+  const runSearch = async (qOverride) => {
+    const q = (typeof qOverride === "string" ? qOverride : query).trim();
     if (!q) return;
     setStatus("loading");
     setSubmitted(q);
@@ -57,6 +57,17 @@ export const SearchPage = ({ domain, apiKey, pageSize = 50, perPage = 5 }) => {
       runSearch();
     }
   };
+
+  // URL の ?q= を読んで自動検索（ナビバー検索ボックスからのリダイレクト先として機能）。
+  useEffect(() => {
+    try {
+      var q = new URLSearchParams(window.location.search).get("q");
+      if (q) {
+        setQuery(q);
+        runSearch(q);
+      }
+    } catch (e) {}
+  }, []);
 
   // path から表示用の情報を導出（防御的に処理）
   const cleanPath = (path) => String(path || "").split(/[?#]/)[0];

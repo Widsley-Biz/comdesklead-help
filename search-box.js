@@ -12,9 +12,10 @@
   var css = document.createElement("style");
   css.textContent = [
     "#cd-search{position:relative;display:inline-flex;align-items:center;margin-right:8px}",
-    "#cd-search input{height:36px;width:210px;max-width:34vw;padding:0 14px;border:1px solid rgba(128,128,128,.4);border-radius:18px;background:transparent;color:inherit;font-size:14px;outline:none}",
+    "#cd-search .cd-ic{position:absolute;left:13px;opacity:.55;pointer-events:none}",
+    "#cd-search input{height:36px;width:300px;max-width:40vw;padding:0 14px 0 38px;border:1px solid rgba(128,128,128,.4);border-radius:18px;background:transparent;color:inherit;font-size:14px;outline:none}",
     "#cd-search input:focus{border-color:#00BCD4}",
-    "@media(max-width:1180px){#cd-search input{width:140px}}",
+    "@media(max-width:1180px){#cd-search input{width:190px}}",
     "#cd-sug{position:absolute;top:44px;right:0;width:420px;max-width:92vw;background:#fff;color:#111;border:1px solid rgba(128,128,128,.22);border-radius:14px;box-shadow:0 10px 34px rgba(0,0,0,.18);overflow:hidden;z-index:10000;display:none}",
     "#cd-sug.open{display:block}",
     ".cd-item{display:block;padding:11px 16px;border-bottom:1px solid rgba(128,128,128,.14);text-decoration:none}",
@@ -31,6 +32,7 @@
   var wrap = document.createElement("div");
   wrap.id = "cd-search";
   wrap.innerHTML =
+    '<svg class="cd-ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>' +
     '<input type="text" placeholder="検索…" aria-label="検索" spellcheck="false" autocomplete="off">' +
     '<div id="cd-sug" role="listbox"></div>';
   var input = wrap.querySelector("input");
@@ -121,7 +123,12 @@
   });
   sug.addEventListener("click", function (e) {
     var b = e.target.closest && e.target.closest("button[data-p]");
-    if (b) { e.preventDefault(); page += (b.getAttribute("data-p") === "next" ? 1 : -1); render(); }
+    if (b) {
+      e.preventDefault();
+      e.stopPropagation(); // 「外側クリック→閉じる」ハンドラに伝播させない（render後に target が外れて誤判定するため）
+      page += (b.getAttribute("data-p") === "next" ? 1 : -1);
+      render();
+    }
   });
   document.addEventListener("click", function (e) {
     if (!wrap.contains(e.target)) sug.classList.remove("open");
@@ -129,11 +136,13 @@
 
   // ナビバーへ注入（Ask Assistant の隣）。React 再描画で外れたら貼り直す。既に居れば触らない。
   function ensure() {
-    if (wrap.closest && wrap.closest("header, nav")) return;
     var anchor = document.getElementById("assistant-entry") ||
                  document.querySelector('[data-component-name="theme-toggle"]') ||
                  document.querySelector('[aria-label="Toggle dark mode"]');
-    if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(wrap, anchor);
+    // Ask Assistant の「左隣」に配置（お問い合わせは右隣に入るので奪い合わない）。
+    if (anchor && anchor.parentNode && wrap.nextElementSibling !== anchor) {
+      anchor.parentNode.insertBefore(wrap, anchor);
+    }
   }
   ensure();
   if (window.MutationObserver && document.body) {
