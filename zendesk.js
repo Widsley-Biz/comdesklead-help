@@ -2,11 +2,17 @@
 (function () {
   var style = document.createElement('style');
   style.textContent = [
+    // 右上フローティング配置（ナビバー右側の領域に重ねる。DOM 注入しないので React 再描画に強い）。
+    // 位置は top / right の値で微調整可能。テーマ切替ボタンに重なる場合は right を増やす。
+    // ナビバー右上に固定配置（テーマ切替ボタンの左隣）。right を増減で微調整可能。
+    // ナビバー内（Ask Assistant の隣）に置く想定の通常スタイル。フローティングではない。
     '#zd-btn{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px;background:#00BCD4;color:#fff;border:none;border-radius:18px;font-size:14px;font-weight:600;font-family:system-ui,sans-serif;cursor:pointer;white-space:nowrap;transition:background .2s,opacity .18s}',
     '#zd-btn .zd-label{display:inline}',
+    // 幅が狭いときはラベルを隠してアイコンのみ（Ask Assistant のように省スペース）。
     '@media (max-width:1180px){#zd-btn{padding:0 10px}#zd-btn .zd-label{display:none}}',
+    // ナビバーに入れられない場合の保険：右上フローティング。
     '#zd-btn.zd-float{position:fixed;bottom:20px;left:20px;top:auto;right:auto;z-index:9998;border-radius:20px;padding:9px 14px;box-shadow:0 2px 8px rgba(0,188,212,.35)}',
-     '#zd-btn:hover{background:#00a5bb;transform:translateY(-1px)}',
+    '#zd-btn:hover{background:#00a5bb;transform:translateY(-1px)}',
     '#zd-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(2px)}',
     '#zd-overlay.open{display:flex}',
     '#zd-modal{background:#fff;border-radius:16px;padding:32px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2);font-family:system-ui,sans-serif;position:relative;margin:16px}',
@@ -192,19 +198,24 @@
   setTimeout(addUI, 100);
   setTimeout(addUI, 600);
   setTimeout(addUI, 1500);
-  
+
   // お問い合わせ を Ask Assistant の隣（ナビバー内）に配置する。フローティングではない。
   // チャットを開いてもナビバーに居続けるよう、React が外しても保持参照で貼り直す。
   var zdRef = null, settled = false, tries = 0;
+  // 表示されている要素だけ返す（モバイルでは desktop 版が hidden、mobile 版が表示）。
+  function vis(el) { return el && el.offsetParent !== null ? el : null; }
+  function findAnchor() {
+    return vis(document.getElementById('assistant-entry')) ||
+           vis(document.getElementById('assistant-entry-mobile')) ||
+           vis(document.querySelector('[data-component-name="theme-toggle"]')) ||
+           vis(document.querySelector('[aria-label="Toggle dark mode"]'));
+  }
   function ensureBtn() {
     if (!zdRef) zdRef = document.getElementById('zd-btn');
     if (!zdRef) return;
-    // 優先: Ask Assistant（本番）。無ければ テーマ切替（ローカル/保険、両環境に存在）。
-    var anchor = document.getElementById('assistant-entry') ||
-                 document.querySelector('[data-component-name="theme-toggle"]') ||
-                 document.querySelector('[aria-label="Toggle dark mode"]');
+    var anchor = findAnchor(); // 見えている Ask Assistant（desktop/mobile）の隣に置く
     if (anchor && anchor.parentNode) {
-      // Ask Assistant の「右隣」に配置（検索ボックスは左隣に入るので奪い合わない）。
+      // 右隣に配置（検索ボックスは左隣に入るので奪い合わない）。
       if (anchor.nextElementSibling !== zdRef) {
         anchor.parentNode.insertBefore(zdRef, anchor.nextSibling);
       }
@@ -213,7 +224,7 @@
       settled = true;
       return;
     }
-    // Ask Assistant が見つからない場合の保険：右上フローティングで表示（消えないように）。
+    // 見える anchor が無い場合の保険：左下フローティングで表示（消えないように）。
     tries++;
     if (!settled && tries > 25) {
       if (!zdRef.isConnected) document.body.appendChild(zdRef);
@@ -225,5 +236,6 @@
   if (window.MutationObserver && document.body) {
     new MutationObserver(ensureBtn).observe(document.body, { childList: true, subtree: true });
   }
+  window.addEventListener('resize', ensureBtn); // ブレークポイント切替で anchor が変わるため
   setInterval(ensureBtn, 1500); // バックストップ
 }());
