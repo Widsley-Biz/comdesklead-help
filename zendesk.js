@@ -193,51 +193,41 @@
   setTimeout(addUI, 600);
   setTimeout(addUI, 1500);
   
-  // Assistant チャットパネルがボタン位置を覆っている間だけ お問い合わせ をフェードで隠す。
-  // パネルの id に依存せず、「ボタンの真後ろの要素が Assistant パネルか」で判定する。
-  function isAssistant(el) {
-    for (var n = 0; el && n < 8; n++, el = el.parentElement) {
-      var id = el.id || '';
-      var cls = (el.className && el.className.toString) ? el.className.toString() : '';
-      var al = (el.getAttribute && el.getAttribute('aria-label')) || '';
-      if (/assistant/i.test(id) || /assistant/i.test(cls) || /assistant/i.test(al)) return true;
+  // お問い合わせ を Ask Assistant の隣（ナビバー内）に配置する。フローティングではない。
+  // チャットを開いてもナビバーに居続けるよう、React が外しても保持参照で貼り直す。
+  var zdRef = null, settled = false, tries = 0;
+  function ensureBtn() {
+    if (!zdRef) zdRef = document.getElementById('zd-btn');
+    if (!zdRef) return;
+    // 既にナビバー内にあるなら触らない（検索ボックスと位置を奪い合わない）。
+    if (zdRef.closest && zdRef.closest('header, nav')) {
+      zdRef.classList.remove('zd-float');
+      zdRef.style.display = '';
+      settled = true;
+      return;
     }
-    return false;
+    // 優先: Ask Assistant の隣（本番）。無ければ テーマ切替の隣（ローカル/保険、両環境に存在）。
+    var anchor = document.getElementById('assistant-entry') ||
+                 document.querySelector('[data-component-name="theme-toggle"]') ||
+                 document.querySelector('[aria-label="Toggle dark mode"]');
+    if (anchor && anchor.parentNode) {
+      anchor.parentNode.insertBefore(zdRef, anchor);
+      zdRef.classList.remove('zd-float');
+      zdRef.style.display = '';
+      settled = true;
+      return;
+    }
+    // Ask Assistant が見つからない場合の保険：右上フローティングで表示（消えないように）。
+    tries++;
+    if (!settled && tries > 25) {
+      if (!zdRef.isConnected) document.body.appendChild(zdRef);
+      zdRef.classList.add('zd-float');
+      zdRef.style.display = '';
+    }
   }
-  function coveredByPanel() {
-    var btn = document.getElementById('zd-btn');
-    if (!btn) return false;
-    var r = btn.getBoundingClientRect();
-    if (!r.width) return false;
-    var pe = btn.style.pointerEvents;
-    btn.style.pointerEvents = 'none'; // elementFromPoint がボタン自身を無視するように
-    var behind = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-    btn.style.pointerEvents = pe;
-    return isAssistant(behind);
-  }
-  function syncBtnVisibility() {
-    var btn = document.getElementById('zd-btn');
-    if (!btn) return;
-    var hide = coveredByPanel();
-    btn.style.opacity = hide ? '0' : '1';
-    btn.style.pointerEvents = hide ? 'none' : '';
-  }
-
-  // 開閉アニメーション中も追従するため、トリガー後しばらく毎フレーム判定する（フェードが滑らかになる）。
-  var pumpFrames = 0;
-  function pump() {
-    syncBtnVisibility();
-    if (pumpFrames > 0) { pumpFrames--; requestAnimationFrame(pump); }
-  }
-  function trigger() {
-    var idle = pumpFrames <= 0;
-    pumpFrames = 40; // 約0.6秒ぶん毎フレーム再判定
-    if (idle) requestAnimationFrame(pump);
-  }
-
-  syncBtnVisibility();
+  ensureBtn();
   if (window.MutationObserver && document.body) {
-    new MutationObserver(trigger).observe(document.body, { childList: true, subtree: true });
+    new MutationObserver(ensureBtn).observe(document.body, { childList: true, subtree: true });
   }
-  document.addEventListener('click', trigger, true);
+  setInterval(ensureBtn, 1500); // バックストップ
 }());
