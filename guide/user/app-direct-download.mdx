@@ -1,0 +1,183 @@
+---
+title: "アプリの直接ダウンロード（ストアを使わないインストール）"
+description: "CallServer・Comdesk Leadモバイルアプリ・ComDesk Phoneのインストーラーを、ストアを経由せず直接ダウンロードする方法をご案内します。"
+---
+
+Comdesk Leadで使用する各アプリは、Google PlayストアやApp Storeを経由せず、**弊社の配布URLから直接ダウンロード**してインストールすることもできます。
+
+<Info>
+**直接ダウンロードを使うケース**
+
+- ストア版では対応していない機能（CallServerのSMS送受信など）を利用する場合
+- 端末の管理ポリシーでストアアプリが利用できない場合
+- 特定のバージョンを指定してインストールする必要がある場合
+</Info>
+
+<Warning>
+直接ダウンロードしたインストーラーは、**ストア経由のような自動アップデートが行われません。**
+バージョンアップの際は、あらためて本ページから最新版をダウンロードしてインストールしてください。
+</Warning>
+
+## ダウンロード一覧
+
+以下のリンクをクリックすると、インストーラーのダウンロードが開始されます。（2026年7月時点の最新バージョン）
+
+| アプリ | 対象OS | バージョン | ファイル形式 | ダウンロード |
+| --- | --- | --- | --- | --- |
+| CallServer<br />（携帯回線発信制御アプリ） | Android | 1.2.2 | .apk | [ダウンロード](https://pl-comdesk-app-upload.s3.ap-northeast-1.amazonaws.com/call_server/android/callserver_1.2.2_prd.apk) |
+| Comdesk Lead<br />モバイルアプリ | Android | 1.3.7 | .apk | [ダウンロード](https://pl-comdesk-app-upload.s3.ap-northeast-1.amazonaws.com/mobile_client/android/app-release_1.3.7_prd.apk) |
+| Comdesk Lead<br />モバイルアプリ | iOS | 1.3.7 | .ipa | [ダウンロード](https://pl-comdesk-app-upload.s3.ap-northeast-1.amazonaws.com/mobile_client/ios/Comdesk-Lead_1.3.7_prd.ipa) |
+| ComDesk Phone<br />（デスクトップアプリ） | Windows | 1.2.2 | .exe | [ダウンロード](https://pl-comdesk-app-upload.s3.ap-northeast-1.amazonaws.com/desktop_app/windows/Comdesk-Desktop-Setup-1.2.2_prd.exe) |
+| ComDesk Phone<br />（デスクトップアプリ） | macOS | 1.2.2 | .pkg | [ダウンロード](https://pl-comdesk-app-upload.s3.ap-northeast-1.amazonaws.com/desktop_app/mac/Comdesk-Desktop_1.2.2_prd.pkg) |
+
+<Note>
+ダウンロードするアプリは、ご利用の回線種別によって異なります。
+
+- **携帯回線**をご利用の場合 … CallServer（Android）
+- **IP回線**をご利用の場合 … ComDesk Phone（Windows / macOS）
+
+どのアプリが必要かご不明な場合は、[サポートチームまでお問い合わせ](/guide/user/32814562359449)ください。
+</Note>
+
+## モバイルアプリのインストール
+
+### CallServer（Android）
+
+<Info>
+Playストア版のCallServerは**SMSに対応していません。** SMSの送受信をご利用の場合は、必ず本ページの直接ダウンロード版（Ver1.2.2）をインストールしてください。
+
+Playストアからのインストール方法は[こちら](/guide/admin/12777882592153)をご確認ください。
+</Info>
+
+<Steps>
+  <Step title="APKファイルをダウンロードする">
+    インストールを行う携帯端末のブラウザ（Google Chromeなど）で、[CallServerのダウンロードリンク](https://pl-comdesk-app-upload.s3.ap-northeast-1.amazonaws.com/call_server/android/callserver_1.2.2_prd.apk)を開きます。
+
+    ダウンロードが完了したら「開く」をタップします。
+
+    <Frame caption="ダウンロード完了後に「開く」をタップ">
+      <img src="/.gitbook/assets/12777882592153_6.png" alt="ダウンロード完了画面で「開く」をタップする" />
+    </Frame>
+  </Step>
+  <Step title="インストールを許可する">
+    「インストール」をタップします。
+
+    <Frame caption="インストール画面">
+      <img src="/.gitbook/assets/12777882592153_7.png" alt="CallServerのインストール確認画面" />
+    </Frame>
+
+    <Note>
+    「この提供元のアプリはインストールできません」といったメッセージが表示された場合は、端末の設定で使用中のブラウザに対して**「不明なアプリのインストール」を許可**してから、あらためてインストールを行ってください。
+    </Note>
+  </Step>
+  <Step title="アプリを開く">
+    インストールが完了したら「開く」をタップします。
+
+    <Frame caption="インストール完了画面">
+      <img src="/.gitbook/assets/12777882592153_8.png" alt="インストール完了後に「開く」をタップする" />
+    </Frame>
+  </Step>
+  <Step title="各種権限を許可する">
+    起動後、以下の権限確認のポップアップが順に表示されます。**すべて許可してください。**
+
+    | 確認内容 | 選択する項目 |
+    | --- | --- |
+    | 音声の録音を「CallServer」に許可しますか？ | アプリの使用時のみ |
+    | 通話履歴へのアクセスを「CallServer」に許可しますか？ | 許可 |
+    | 電話の発信と管理を「CallServer」に許可しますか？ | 許可 |
+    | SMSメッセージの送信と表示を「CallServer」に許可しますか？ | 許可 |
+    | デバイス内の写真やメディアへのアクセスを「CallServer」に許可しますか？ | 許可 |
+
+    <Frame caption="音声の録音の許可">
+      <img src="/.gitbook/assets/12777882592153_9.png" alt="音声の録音を許可するポップアップ" />
+    </Frame>
+
+    <Frame caption="通話履歴へのアクセスの許可">
+      <img src="/.gitbook/assets/12777882592153_10.png" alt="通話履歴へのアクセスを許可するポップアップ" />
+    </Frame>
+
+    <Frame caption="電話の発信と管理の許可">
+      <img src="/.gitbook/assets/12777882592153_11.png" alt="電話の発信と管理を許可するポップアップ" />
+    </Frame>
+
+    <Frame caption="SMSメッセージの送信と表示の許可">
+      <img src="/.gitbook/assets/12777882592153_12.png" alt="SMSメッセージの送信と表示を許可するポップアップ" />
+    </Frame>
+
+    <Frame caption="写真やメディアへのアクセスの許可">
+      <img src="/.gitbook/assets/12777882592153_13.png" alt="デバイス内の写真やメディアへのアクセスを許可するポップアップ" />
+    </Frame>
+
+    <Warning>
+    権限を「許可しない」で進めると、発着信・録音・SMSが正しく動作しません。
+    誤って拒否した場合は、端末の「設定」→「アプリ」→「CallServer」→「権限」から許可し直してください。
+    </Warning>
+  </Step>
+  <Step title="ログインする">
+    インストール完了後、CallServerへのログインが必要です。
+    ログイン方法は[携帯回線発信制御アプリ（CallServer）のログイン・ログアウト](/guide/user/12744354427033)をご確認ください。
+  </Step>
+</Steps>
+
+### Comdesk Lead モバイルアプリ（Android）
+
+<Steps>
+  <Step title="APKファイルをダウンロードする">
+    インストールを行う端末のブラウザで、[Comdesk Leadモバイルアプリのダウンロードリンク](https://pl-comdesk-app-upload.s3.ap-northeast-1.amazonaws.com/mobile_client/android/app-release_1.3.7_prd.apk)を開きます。
+  </Step>
+  <Step title="インストールする">
+    ダウンロードしたファイルをタップし、「インストール」を選択します。
+
+    <Note>
+    「この提供元のアプリはインストールできません」と表示された場合は、端末の設定で使用中のブラウザに対して**「不明なアプリのインストール」を許可**してから、あらためてインストールを行ってください。
+    </Note>
+  </Step>
+  <Step title="ログインする">
+    インストール後にアプリを起動し、Comdesk Leadのユーザーアカウント（Email / パスワード）でログインします。
+  </Step>
+</Steps>
+
+### Comdesk Lead モバイルアプリ（iOS）
+
+<Warning>
+iOS版のインストーラー（`.ipa` ファイル）は、**端末のブラウザからタップしてそのままインストールすることはできません。**
+
+MDM（モバイルデバイス管理）やApple Configuratorなど、企業内配布の仕組みを利用して端末へ配信する必要があります。
+配布方法についてはご利用環境によって異なりますので、[サポートチームまでお問い合わせ](/guide/user/32814562359449)ください。
+</Warning>
+
+## デスクトップアプリ（ComDesk Phone）のインストール
+
+IP回線をご利用の場合に使用するデスクトップアプリです。上記のダウンロード一覧からインストーラーを取得し、以下の記事の手順に沿ってインストールしてください。
+
+<CardGroup cols={2}>
+  <Card title="Windows版のインストール手順" icon="windows" href="/features/advanced/14502240732825">
+    ComDesk Phone（WindowsOS）のインストール方法
+  </Card>
+  <Card title="macOS版のインストール手順" icon="apple" href="/features/advanced/14508506030489">
+    ComDesk Phone（macOS）のインストール方法
+  </Card>
+</CardGroup>
+
+<Info>
+インストール後のログイン方法は[ComDesk Phone ログイン方法](/features/advanced/14508544705177)をご確認ください。
+</Info>
+
+## よくあるご質問
+
+<AccordionGroup>
+  <Accordion title="ダウンロードリンクを開いてもファイルが保存されない">
+    端末やブラウザの設定でダウンロードがブロックされている可能性があります。
+    別のブラウザ（Google Chromeなど）でお試しいただくか、Wi-Fi環境で再度ダウンロードをお試しください。
+  </Accordion>
+  <Accordion title="現在インストールされているバージョンを確認したい">
+    **Android**：端末の「設定」→「アプリ」→ 対象のアプリを選択すると、画面下部にバージョンが表示されます。<br />
+    **Windows / macOS**：ComDesk Phoneのアプリ内メニューからバージョンをご確認いただけます。
+  </Accordion>
+  <Accordion title="古いバージョンをアンインストールしてから入れ直す必要はある？">
+    通常は上書きインストールで問題ありません。
+    インストールに失敗する場合は、既存アプリをアンインストールし、ダウンロードフォルダに残っている古いインストーラーファイルを削除したうえで、あらためてインストールしてください。
+  </Accordion>
+</AccordionGroup>
+
+その他ご不明点などございましたら、[サポートチームまでお問い合わせ](/guide/user/32814562359449)をお願い致します。
