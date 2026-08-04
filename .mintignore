@@ -1,3 +1,9 @@
 SUMMARY.md
 README.md
 test.md
+
+# MFA関連の重複ページ（features/advanced/mfa-manual を正とするため非公開）
+features/basic/file-1.mdx
+features/basic/file-2.mdx
+guide/user/untitled-page.mdx
+troubleshoot/error/untitled-page.mdx
