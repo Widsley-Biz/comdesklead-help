@@ -1,0 +1,454 @@
+---
+title: "Salesforce連携設定マニュアル"
+description: "Salesforceとの接続、架電履歴の連携、Salesforceの顧客の取り込み、Comdesk LeadからSalesforceへの顧客登録までの設定手順をご案内します。"
+---
+
+Comdesk LeadとSalesforceを連携すると、以下のことができます。
+
+- **架電履歴をSalesforceに残す（活動履歴同期）**：Comdesk Leadでの発着信を、SalesforceのToDo（活動）として自動で登録します。
+- **Salesforceの顧客をComdesk Leadに取り込む（コンタクト同期）**：Salesforceのリード・取引先・取引先責任者を、Comdesk Leadの顧客として自動で取り込みます。
+- **Comdesk Leadの顧客をSalesforceに登録する（CRMに連携）**：架電で獲得した顧客を、重複チェックのうえSalesforceに登録します。
+
+Salesforceを顧客情報のマスターとして使えるため、Comdesk Leadへのリストの取り込み（CSVインポートなど）が不要になります。
+
+<Info>
+  本マニュアルは、2026年9月30日以降の新しい接続方式の手順です。<br />
+  それ以前からSalesforce連携をご利用中のお客様は、これまでの設定のまま引き続きご利用いただけます。これまでの設定手順は [Salesforce連携設定マニュアル（旧方式）](/features/advanced/salesforce-integration) をご確認ください。新しい方式への切り替えについては、**旧方式から新方式へ切り替える場合** をご確認ください。
+</Info>
+
+**目次**
+
+1. 事前準備
+2. Salesforceと接続する
+3. 活動履歴同期を設定する
+4. コンタクト同期を設定する
+5. CRMに連携を設定する
+6. ほかのCRMとの併用について
+7. 旧方式から新方式へ切り替える場合
+8. よくある質問
+
+## 事前準備
+
+設定を始める前に、以下をご確認ください。
+
+<Steps>
+  <Step title="Salesforceの管理者権限を確認する">
+    パッケージのインストールと接続の許可には、Salesforceの管理者権限が必要です。貴社でSalesforceを管理されている方にご協力をお願いします。
+  </Step>
+  <Step title="Salesforceにカスタム項目を作成する">
+    連携用パッケージ（接続時にインストールします）には、活動履歴の連携先となるカスタム項目の多くは含まれていません。Salesforceにカスタム項目を作成してください。作成する項目は、下記の **Salesforceに作成するカスタム項目** をご確認ください。
+  </Step>
+</Steps>
+
+### Salesforceに作成するカスタム項目
+
+活動履歴をSalesforceに連携するには、連携先の項目をSalesforce側に用意しておく必要があります。以下の表を参考に、Salesforceにカスタム項目を作成してください。
+
+<Info>
+  **データ型は推奨の設定です。** 「電話番号（発信元）」は **電話**、「通話開始時刻」は **日付/時間** で作成してください。それ以外の項目は、テキスト型でも連携できます。貴社の運用に合わせて設定してください。
+</Info>
+
+#### カスタム項目の作成が必要な項目
+
+Salesforceの「活動」に、カスタム項目として作成します。
+
+| Comdesk Leadの項目 | Salesforceの項目名（例） | 必須 | 推奨のデータ型 |
+| --- | --- | --- | --- |
+| 通話開始時刻 | 通話開始時刻 | ○ | **日付/時間** |
+| 電話番号（発信元） | 電話番号（発信元） | ○ | **電話** |
+| 該当プロジェクト | 該当プロジェクト | | テキスト（255） |
+| 更新者 | 更新者 | | テキスト（255） |
+| 顧客名 | 顧客名 | | テキスト（255） |
+| 応対者 | 応対者 | | テキスト（255） |
+| 再コールフラグ | 再コールフラグ | | チェックボックス |
+| 通話メモ | 通話メモ | | テキスト（255） |
+| 活動履歴URL | 活動履歴URL | | URL（255） |
+| 顧客UUID | 顧客UUID | | テキスト（255） |
+| 録音ファイルのテキストデータ化 | 録音ファイルのテキストデータ化 | | テキスト（255） |
+| 録音ファイルDL_URL | 録音ファイルDL_URL | | URL（255） |
+
+- 「必須」に○が付いている項目は、活動履歴同期のマッピングで必ず設定が必要です（作成不要の項目にも必須のものがあります）。
+- 必須でない項目は、連携したい項目だけ作成してください。
+
+#### カスタム項目の作成が不要な項目
+
+| Comdesk Leadの項目 | Salesforceの項目 | 必須 | 備考 |
+| --- | --- | --- | --- |
+| 活動履歴ID | CDL通話履歴ID | | パッケージのインストール時に作成されます。変更できません。 |
+| コール種別 | 通話結果 | ○ | Salesforce（ToDo）の標準項目です。 |
+| 担当者 | 割り当て先ID | ○ | Salesforceの標準項目です。変更できません。 |
+| 電話番号（発信先） | 電話番号（発信先） | ○ | パッケージのインストール時に作成される項目を選択してください。 |
+| ステータス | 状況 | ○ | Salesforceの標準項目です。 |
+| 該当ワークグループ | 件名 | | Salesforceの標準項目です。 |
+
+#### 個別の項目として連携できない項目
+
+「通話時間」と「会話内容要約」は、現在、個別の項目としては連携できません。連携したい場合は、活動履歴同期の「件名」「説明」に設定してください。
+
+## Salesforceと接続する
+
+<Info>
+  初回の接続は、Salesforceの管理者が1回だけ行います（約3分）。2回目以降は、「Salesforceと接続」ボタンから接続できます。
+</Info>
+
+<Steps>
+  <Step title="Salesforceの設定画面を開く">
+    画面左下の歯車アイコンから「Manage」メニューを開き、「インテグレーション管理」→「Salesforce」を選択します。
+  </Step>
+  <Step title="Step 1：パッケージをインストールする">
+    接続先（本番環境／Sandbox環境）を選択し、「Salesforceにインストール」をクリックします。
+
+    <Frame caption="Step 1 インストール">
+      <img src="/.gitbook/assets/salesforce-integration-new_01.png" alt="接続先の選択と「Salesforceにインストール」ボタン（赤枠）" />
+    </Frame>
+
+    Salesforceのインストール画面が開きます。Salesforceのシステム管理者でログインし、「すべてのユーザーのインストール」を選択して「インストール」をクリックします。インストールが完了したら、Comdesk Leadの画面に戻り「次へ」をクリックします。
+
+    <Frame caption="Salesforceのインストール画面">
+      <img src="/.gitbook/assets/salesforce-integration-new_02.png" alt="「すべてのユーザーのインストール」と「インストール」ボタン（赤枠）" />
+    </Frame>
+
+    <Note>
+      すでに同じバージョンのパッケージがインストールされている場合、インストールは不要です。旧方式のパッケージをインストール済みの場合も、新しいパッケージで上書きされるため、そのままインストールしてください。
+    </Note>
+  </Step>
+  <Step title="Step 2：利用ユーザーを認可する">
+    Salesforceで、Comdesk Leadと接続するユーザーを許可します。画面に表示される手順に沿って、Salesforceのシステム管理者が以下を行ってください。
+
+    1. Salesforceの設定のクイック検索で「外部クライアントアプリケーションマネージャー」と検索し、「comdesk_lead」→「ポリシー」→「編集」を開きます。「OAuthポリシー」の「許可されているユーザー」を「管理者が承認したユーザーは事前承認済み」にします。
+    2. 同じ編集画面の「プロファイルを選択」で、Comdesk Leadと接続するユーザーのプロファイル（例：システム管理者）を「選択済み」に移動して保存します。特定のユーザーだけを許可する場合は、「権限セットを選択」で権限セットを指定します。
+    3. 接続するユーザーのプロファイル（または権限セット）の「システム権限」で、「APIの有効化」にチェックが入っていることを確認します。
+
+    完了したら「次へ」をクリックします。
+
+    <Frame caption="Step 2 利用ユーザーを認可">
+      <img src="/.gitbook/assets/salesforce-integration-new_03.png" alt="利用ユーザーを認可する手順（赤枠）" />
+    </Frame>
+  </Step>
+  <Step title="Step 3：Salesforceと接続する">
+    「Salesforceと接続」をクリックし、接続先の環境（本番環境／Sandbox環境）を選択して「Salesforceへ進む」をクリックします。
+
+    <Frame caption="接続先の環境を選択">
+      <img src="/.gitbook/assets/salesforce-integration-new_04.png" alt="「Salesforceと接続」ボタン、接続先の環境、「Salesforceへ進む」ボタン（赤枠）" />
+    </Frame>
+
+    <Note>
+      Step 2で認可したユーザーでログインしてください。管理者権限のあるユーザーでのログインをおすすめします。接続したユーザーの権限で、活動履歴が記録されます。<br />
+      ブラウザで別のSalesforce組織にログインしている場合は、最後にログインした組織に自動で接続されます。接続したい組織のユーザーでログインしているかを、事前にご確認ください。
+    </Note>
+  </Step>
+  <Step title="アクセスを許可する">
+    Salesforceにログインすると、「アクセスを許可しますか?」の画面が表示されます。「許可」をクリックします。
+
+    <Frame caption="アクセスの許可">
+      <img src="/.gitbook/assets/salesforce-integration-new_05.png" alt="Salesforceのアクセス許可画面の「許可」ボタン（赤枠）" />
+    </Frame>
+  </Step>
+  <Step title="接続できたことを確認する">
+    Comdesk Leadの画面に戻り、「接続が完了しました」と表示されれば完了です。接続したorg名・接続ユーザー・接続日時・環境・パッケージのバージョンが表示されます。
+
+    <Frame caption="接続後のSalesforce設定画面">
+      <img src="/.gitbook/assets/salesforce-integration-new_06.png" alt="接続情報（赤枠）と、活動履歴同期・コンタクト同期・CRMに連携の設定" />
+    </Frame>
+  </Step>
+</Steps>
+
+### 接続の切断・再接続
+
+| 操作 | 内容 |
+| --- | --- |
+| 再接続 | Salesforceへの接続をやり直します。設定したマッピングはそのまま残ります。 |
+| Salesforceの接続を切断する | Salesforceとの接続を切断します。設定したマッピングは残ります。 |
+
+<Warning>
+  Salesforce側の接続の有効期限が切れた場合などは、「再認証が必要」と表示され、同期が停止します。「再接続」から接続し直してください。
+</Warning>
+
+## 活動履歴同期を設定する
+
+Comdesk Leadでの発着信を、SalesforceのToDo（活動）として登録します。デスクトップアプリでの発着信も対象です。
+
+「活動履歴同期（Comdesk→Salesforce）」の「マッピング設定」をクリックすると、設定画面が開きます。設定は4つのステップで進めます。
+
+<Steps>
+  <Step title="活動履歴項目を設定する">
+    Comdesk Leadの項目（左）と、Salesforceの項目（右）を紐付けます。「＊」が付いている項目は必須です。紐付けるSalesforceの項目は、**Salesforceに作成するカスタム項目** をご確認ください。
+
+    <Frame caption="Step 1 活動履歴項目">
+      <img src="/.gitbook/assets/salesforce-integration-new_07.png" alt="活動履歴項目のマッピング画面のSalesforce側の項目（赤枠）" />
+    </Frame>
+  </Step>
+  <Step title="選択バリューを設定する">
+    「応答者」「ステータス」「ユーザー」のタブごとに、Comdesk Leadの値とSalesforceの値を対応付けます。「全て追加」をクリックすると、値がまとめて追加されます。
+
+    <Frame caption="Step 2 選択バリュー">
+      <img src="/.gitbook/assets/salesforce-integration-new_08.png" alt="応答者・ステータス・ユーザーのタブと「全て追加」（赤枠）" />
+    </Frame>
+
+    <Note>
+      ステータスの対応付けを設定した場合は、設定したステータスのみが連携されます。何も設定しない場合は、すべてのステータスがそのまま連携されます。<br />
+      ステータスの「---未設定---」は、対応付けを設定したステータス以外のすべてを表します。
+    </Note>
+  </Step>
+  <Step title="連携詳細設定をする">
+    ToDoの「件名」「説明」に入れる内容を設定します。自由入力のテキストと、下に並ぶComdesk Leadの項目を組み合わせて設定できます。
+
+    <Frame caption="Step 3 連携詳細設定（件名・説明）">
+      <img src="/.gitbook/assets/salesforce-integration-new_09.png" alt="件名と説明の設定欄（赤枠）" />
+    </Frame>
+
+    <Note>
+      Salesforceの件名は255文字までです。超えた分は切り捨てて連携されます。
+    </Note>
+
+    <Tip>
+      「会話内容要約」「録音ファイルのテキスト化データ」など文字数の多い項目は、「説明」に設定してください。
+    </Tip>
+
+    続けて、ToDoを紐付けるSalesforceのレコードを設定します。上に設定したものが優先されます。
+
+    - **WhoId（人物）**：取引先責任者（Contact）またはリード（Lead）のどちらか1レコードに紐付けます。
+    - **WhatId（関連先）**：取引先（Account）／商談（Opportunity）／キャンペーン（Campaign）／ケース（Case）／契約（Contract）のいずれか1レコードに紐付けます。
+    - 「WhoIdおよびWhatIdいずれも紐づかない履歴は同期しない」にチェックを入れると、どのレコードにも紐付かない履歴は連携されません。
+
+    <Frame caption="Step 3 連携詳細設定（WhoId・WhatId）">
+      <img src="/.gitbook/assets/salesforce-integration-new_10.png" alt="WhoIdとWhatIdの設定欄（赤枠）" />
+    </Frame>
+
+    <Note>
+      WhoIdにリードが紐付いた場合、関連先（WhatId）は設定されません（Salesforceの仕様です）。
+    </Note>
+
+    <Warning>
+      WhatIdに、Salesforceのカスタムオブジェクトは設定できません。
+    </Warning>
+  </Step>
+  <Step title="連携テストをして保存する">
+    「連携テスト」をクリックします。「連携テストが成功しました」と表示されたら、「保存」をクリックします。SalesforceにはテストのToDoが作成されます。
+
+    <Frame caption="Step 4 連携テスト">
+      <img src="/.gitbook/assets/salesforce-integration-new_11.png" alt="「連携テスト」ボタン、成功メッセージ、「保存」ボタン（赤枠）" />
+    </Frame>
+  </Step>
+  <Step title="同期をオンにする">
+    Salesforceの設定画面に戻り、「活動履歴同期」の「同期をONにする」をオンにします。
+  </Step>
+</Steps>
+
+<Info>
+  Salesforceでリードを取引先責任者に変換した場合も、それまでの架電履歴は変換後の取引先責任者に引き継がれます。Comdesk Leadで活動履歴を編集した場合も、変換後の取引先責任者に紐付くToDoに反映されます。
+</Info>
+
+## コンタクト同期を設定する
+
+Salesforceのリード・取引先・取引先責任者を、Comdesk Leadの顧客として自動で取り込みます。
+
+<Warning>
+  コンタクト同期は **Salesforce → Comdesk Lead** の片方向です。Comdesk Leadで顧客情報を変更しても、Salesforceには反映されません。
+</Warning>
+
+「コンタクト同期（Salesforce→Comdesk）」の「マッピング設定」をクリックすると、設定画面が開きます。設定は4つのステップで進めます。
+
+<Steps>
+  <Step title="コンタクト項目を設定する">
+    「リード」「取引先責任者」「取引先」のタブを切り替え、それぞれSalesforceの項目（左）とComdesk Leadの顧客項目（右）を紐付けます。
+
+    - 電話番号は、1つ以上の項目の紐付けが必須です。
+    - 紐付けた項目は、Comdesk LeadではSalesforceの内容が正として扱われ、編集できなくなります。
+
+    <Frame caption="Step 1 コンタクト項目">
+      <img src="/.gitbook/assets/salesforce-integration-new_12.png" alt="リード・取引先責任者・取引先のタブと、電話番号の紐付け（赤枠）" />
+    </Frame>
+  </Step>
+  <Step title="選択バリューを設定する">
+    都道府県・業種・従業員数など、Salesforceの選択リスト項目の値を、Comdesk Leadの値と対応付けます。「全て追加」をクリックすると、名称が一致する値がまとめて対応付けられます。
+
+    設定しなかった値は、Salesforceの値がそのまま取り込まれます。Step 1で選択リスト項目を紐付けていない場合、このステップで設定する項目はありません。
+  </Step>
+  <Step title="同期詳細設定をする">
+    以下を設定します。
+
+    - **同期の範囲とプロジェクトの割り当て**：取り込むSalesforceのリストビューと、取り込み先のComdesk Leadのプロジェクトを1組以上設定します。設定したリストビューに含まれるレコードだけが取り込まれます。取り込み対象の指定はSalesforceの **リストビュー** で行います（レポートは指定できません）。
+    - **Comdeskに既に登録されている電話番号**：新規のコンタクトとして登録する／既存のコンタクトに紐付ける（同期項目は置き換え）
+    - **Salesforceで該当レコードが削除・無効化された際**：変更しない／同期を解除する
+    - **リード転換時の紐付け先**：常に取引先責任者（Contact）に紐付ける／常に取引先（Account）に紐付ける
+
+    <Frame caption="Step 3 同期詳細設定">
+      <img src="/.gitbook/assets/salesforce-integration-new_13.png" alt="リストビューとプロジェクトの割り当て、電話番号・削除時・リード転換時の設定（赤枠）" />
+    </Frame>
+
+    <Note>
+      プロジェクトへの割り当ては、初回の同期時のみ行われます。Comdesk Leadでプロジェクトを変更した場合は、その内容が維持されます。複数のリストビューに含まれるレコードは、該当するすべてのプロジェクトに登録されます。<br />
+      Salesforceでレコードを削除しても、Comdesk Leadの顧客が削除されることはありません。
+    </Note>
+
+    <Warning>
+      同じプロジェクト内に、名前が異なり電話番号が同じ顧客が複数ある場合、「既存のコンタクトに紐付ける」を選択すると、最も古く登録された顧客に紐付きます。意図しない顧客に紐付くのを避けたい場合は、「新規のコンタクトとして登録」を選択してください。
+    </Warning>
+  </Step>
+  <Step title="連携テストをして、初回連携を開始する">
+    「連携テスト」をクリックし、「正常に接続されています」と表示されたら「初回連携」をクリックします。初回に取り込む件数も表示されます。最後に「保存」をクリックします。
+
+    <Frame caption="Step 4 連携テスト">
+      <img src="/.gitbook/assets/salesforce-integration-new_14.png" alt="「連携テスト」、接続結果、「初回連携」ボタンと初回同期件数（赤枠）" />
+    </Frame>
+  </Step>
+  <Step title="同期をオンにする">
+    Salesforceの設定画面に戻り、「コンタクト同期」の「同期をONにする」をオンにします。
+  </Step>
+</Steps>
+
+### 同期のタイミングと状況の確認
+
+- 初回の連携はバックグラウンドで実行されるため、画面を閉じても問題ありません。件数が多い場合は、完了まで数日かかることがあります。
+- 初回の連携後は、約10分ごとに、Salesforceで作成・更新されたレコードを取り込みます。
+- 「コンタクト同期」の「連携履歴」から、直近7日分の同期の実行履歴（日時・全件／差分・結果・新規／更新／失敗の件数）を確認できます。失敗した場合は、「失敗理由」をクリックすると内容を確認できます。
+
+<Frame caption="連携履歴">
+  <img src="/.gitbook/assets/salesforce-integration-new_15.png" alt="連携履歴の画面（日時・種別・結果・件数・失敗理由）" />
+</Frame>
+
+### 同期した顧客の編集について
+
+コンタクト同期で取り込んだ顧客は、Salesforceの内容が正として扱われます。
+
+- 紐付けた項目には、グレーの鍵アイコンが表示され、Comdesk Leadでは編集できません。Salesforceで編集してください。鍵アイコンは、「コンタクト同期」の「同期をONにする」がオンのときに表示されます。
+- 紐付けていない項目（下の画像の「Tel4」など）や、応対者・ステータス・通話メモ・再コール予定などComdesk Lead独自の項目は、同期がオンのときも編集できます。
+- 顧客の上部に、連携しているSalesforceのオブジェクト（リードなど）が表示されます。
+
+<Frame caption="同期した顧客の表示（コールモード）">
+  <img src="/.gitbook/assets/salesforce-integration-new_20.png" alt="項目名の横の鍵アイコンと、「連携解除」（赤枠）" />
+</Frame>
+
+#### 顧客ごとに同期を解除する
+
+Comdesk Leadで編集したい顧客は、顧客ごとに同期を解除できます。
+
+<Steps>
+  <Step title="連携解除をクリックする">
+    顧客の上部（評価の下）にある「連携解除」をクリックします。確認のメッセージが表示されたら、「解除する」をクリックします。
+
+    <Frame caption="Salesforce連携の解除">
+      <img src="/.gitbook/assets/salesforce-integration-new_21.png" alt="Salesforce連携の解除の確認メッセージと「解除する」ボタン（赤枠）" />
+    </Frame>
+  </Step>
+  <Step title="解除されたことを確認する">
+    鍵アイコンが消え、すべての項目をComdesk Leadで編集できるようになります。「連携解除」は「再連携」に切り替わります。解除後は、Salesforceの更新はこの顧客に反映されません。
+
+    <Frame caption="同期を解除した顧客">
+      <img src="/.gitbook/assets/salesforce-integration-new_22.png" alt="鍵アイコンが消えた項目と「再連携」（赤枠）" />
+    </Frame>
+  </Step>
+</Steps>
+
+#### 同期を再開する
+
+「再連携」をクリックし、確認のメッセージで「再連携する」をクリックします。再び鍵アイコンが表示され、次回の同期（約10分ごと）で、紐付けた項目がSalesforceの内容で上書きされます。
+
+<Frame caption="Salesforce連携の再開">
+  <img src="/.gitbook/assets/salesforce-integration-new_23.png" alt="Salesforce連携の再開の確認メッセージと「再連携する」ボタン（赤枠）" />
+</Frame>
+
+<Note>
+  すべての顧客の同期をまとめて解除する場合は、Salesforceの設定画面の「コンタクト同期」から操作します。
+</Note>
+
+## CRMに連携を設定する
+
+Comdesk Leadの顧客を、Salesforceのリード／取引先責任者／取引先として登録します。架電で獲得した顧客など、Comdesk LeadにあってSalesforceにない顧客を、Salesforceに手入力し直す必要がなくなります。
+
+<Info>
+  「CRMに連携」を使うには、先に **コンタクト同期を設定する** の設定が必要です。
+</Info>
+
+### CRMに連携を有効にする
+
+Salesforceの設定画面の「CRMに連携を有効化（Comdesk→Salesforce）」で、「Comdeskのコンタクト上に『CRMに連携』ボタンをONにする」をオンにします。
+
+<Frame caption="CRMに連携を有効化">
+  <img src="/.gitbook/assets/salesforce-integration-new_16.png" alt="「CRMに連携」ボタンをONにするトグル（赤枠）" />
+</Frame>
+
+### 顧客をSalesforceに登録する
+
+<Steps>
+  <Step title="CRMに連携を開く">
+    コールモードまたはコンタクト管理で、登録したい顧客の「CRMに連携」をクリックします。
+  </Step>
+  <Step title="重複チェックをする">
+    「重複チェック」をクリックします。同じ電話番号のレコードがSalesforceにあるかを確認します。重複チェックをするまでは、連携はできません。
+
+    <Frame caption="CRMに連携">
+      <img src="/.gitbook/assets/salesforce-integration-new_17.png" alt="「重複チェック」ボタン（赤枠）" />
+    </Frame>
+  </Step>
+  <Step title="紐付け先を選んで連携する">
+    **重複がある場合**：「登録が○件あります」と表示され、該当するSalesforceのレコードが一覧で表示されます。既存のレコードに紐付けるか、新規のコンタクトとして登録するかを選択し、「連携」をクリックします。
+
+    <Frame caption="既存のコンタクトに紐付ける場合">
+      <img src="/.gitbook/assets/salesforce-integration-new_18.png" alt="「既存のコンタクトに紐づけ」と該当レコード（赤枠）" />
+    </Frame>
+
+    **重複がない場合、または新規に登録する場合**：連携先（リード／取引先責任者／取引先）を選択し、必須の項目を入力して「連携」をクリックします。
+
+    <Frame caption="新規のコンタクトとして登録する場合">
+      <img src="/.gitbook/assets/salesforce-integration-new_19.png" alt="「新規のコンタクトとして登録」、連携先、必須項目（赤枠）" />
+    </Frame>
+
+    | 連携先 | 必須の項目 |
+    | --- | --- |
+    | リード | 姓、会社名 |
+    | 取引先責任者 | 姓 |
+    | 取引先 | 取引先名 |
+  </Step>
+  <Step title="連携を確認する">
+    連携が完了すると、「CRMに連携」ボタンが「Salesforceで開く」に変わります。以降、この顧客はSalesforceの内容が正として扱われ、紐付けた項目はComdesk Leadで編集できなくなります。
+  </Step>
+</Steps>
+
+## ほかのCRMとの併用について
+
+1つのテナントで連携できるCRMは1つです。Salesforceの「活動履歴同期」「コンタクト同期」「CRMに連携を有効化」のいずれかをオンにすると、HubSpot・kintoneなどほかのCRMの連携はオフになります。ほかのCRMがオンになっている場合は、確認のメッセージが表示されます。
+
+<Note>
+  オフになったCRMの接続情報は残ります。
+</Note>
+
+デスクトップアプリで連携するCRMは、「デスクトップアプリで連携するCRMにする」で設定します。
+
+## 旧方式から新方式へ切り替える場合
+
+2026年9月30日より前からSalesforce連携をご利用中のお客様は、これまでの設定のまま引き続きご利用いただけます。新しい方式に切り替える場合は、Salesforceの設定画面に表示される「新しい接続方式に切り替えられます」の「切り替える」をクリックし、**Salesforceと接続する** の Step 1〜3 の手順で接続してください。
+
+<Warning>
+  **一度新しい方式に切り替えると、旧方式に戻すことはできません。** 特に、新しいパッケージをインストールした後は元に戻せません。<br />
+  切り替えは、設定の見直しに時間を取れるタイミングで行ってください。
+</Warning>
+
+切り替えの前に、以下をご確認ください。
+
+- **マッピングの設定し直しが必要です。** 新しい方式に切り替えた後、活動履歴同期のマッピングを設定し直してください。ステータス・ユーザーの対応付けは、これまでどおり設定してください。
+- **一部のカスタム項目の作成が必要です。** 新しい方式では「通話開始時刻」と「電話番号（発信元）」が必須になりました。旧方式で連携していなかった場合は、Salesforceにカスタム項目を作成してください。作成する項目は **Salesforceに作成するカスタム項目** をご確認ください。
+- **活動履歴の連携方法（Comdesk Lead → Salesforce）は、これまでと変わりません。** コンタクト同期とCRMに連携は、新しい方式に切り替えた後にご利用いただけます。
+
+## よくある質問
+
+<AccordionGroup>
+  <Accordion title="Salesforceで登録した顧客は、すぐにComdesk Leadに反映されますか？">
+    コンタクト同期は約10分ごとに行われます。登録から反映まで、最大で10分ほどかかります。
+  </Accordion>
+  <Accordion title="Comdesk Leadで変更した顧客情報は、Salesforceに反映されますか？">
+    反映されません。コンタクト同期はSalesforce → Comdesk Leadの片方向です。Comdesk LeadからSalesforceに登録する場合は、「CRMに連携」をご利用ください。
+  </Accordion>
+  <Accordion title="Salesforceで顧客を削除すると、Comdesk Leadの顧客も削除されますか？">
+    削除されません。コンタクト同期の設定で、「変更しない」か「同期を解除する」かを選択できます。
+  </Accordion>
+  <Accordion title="取り込まれない顧客があります。">
+    コンタクト同期で設定したリストビューに含まれていない顧客は、取り込まれません。Salesforceのリストビューの条件をご確認ください。失敗している場合は、「連携履歴」で失敗の理由を確認できます。
+  </Accordion>
+  <Accordion title="HubSpotやkintoneと同時に使えますか？">
+    同時には使えません。1つのテナントで連携できるCRMは1つです。
+  </Accordion>
+</AccordionGroup>
+
+その他ご不明点などございましたら、[**サポートチームまでお問い合わせ**](#contact)をお願い致します。
