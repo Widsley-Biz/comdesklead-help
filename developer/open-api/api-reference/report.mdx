@@ -1,12 +1,12 @@
 ---
 title: "レポート"
-description: "BI ツール向けに集計済みの通話統計を取得 — サマリー、通話別、ユーザー別レポート。"
+description: "BI ツール向けに集計済みの通話統計を取得 — サマリー、内訳、ユーザー別レポート。"
 ---
 
-ベース URL：`https://app.comdesk.com/api/v1`
+ベース URL：`https://xxxx.comdesk.com/api/v1`
 
 <Note>
-  レポート API は **`open_api_advanced`** ライセンスと、`reports:read` スコープを持つキーが必要です。
+  レポート API は **`open_api_advanced`** ライセンス（ない場合は `403 license_required`）と、`reports:read` スコープを持つキーが必要です。
 </Note>
 
 | メソッド | パス | スコープ |
@@ -15,13 +15,37 @@ description: "BI ツール向けに集計済みの通話統計を取得 — サ�
 | `GET` | `/reports/calls` | `reports:read` |
 | `GET` | `/reports/users` | `reports:read` |
 
-すべてのレポートエンドポイントは同じ期間クエリパラメータを共有します。
+レポートは日次の集計データから作成されるため、最小単位は 1 日です。
 
-### クエリパラメータ
+### 共通クエリパラメータ
+
+<ParamField query="from" type="string" required>
+  開始日、`YYYY-MM-DD`。最大 **180 日**前まで指定できます。
+</ParamField>
 
 <ParamField query="to" type="string" required>
-  終了日。範囲は **31 日**を超えられず、`from` は最大 **180 日**前まで。いずれかを超えると `422` を返します。
+  終了日、`YYYY-MM-DD`。`from` 以降の日付。範囲は **31 日**を超えられません。いずれかのルールに違反すると `422` を返します。
 </ParamField>
+
+<ParamField query="project_id" type="integer">
+  プロジェクトで絞り込み。
+</ParamField>
+
+### 指標フィールド
+
+内訳レポートとユーザー別レポートは、各行に次の指標を返します：
+
+| フィールド | 説明 |
+| --- | --- |
+| `total_out_calls` / `total_out_connected` | 発信数 / 接続した発信数 |
+| `total_in_calls` / `total_in_connected` | 着信数 / 接続した着信数 |
+| `total_calls` | `total_out_calls + total_in_calls` |
+| `connected_calls` | `total_out_connected + total_in_connected` |
+| `connection_rate` | 発信の接続率（%）（`total_out_connected / total_out_calls`） |
+| `total_duration_seconds` | 合計通話時間 |
+| `avg_duration_seconds` | `total_duration_seconds / total_calls`（四捨五入） |
+| `total_mybox` | 留守番電話（MyBox）で終了した通話数 |
+| `total_appoints` | 記録されたアポイント数 |
 
 ---
 
@@ -29,24 +53,99 @@ description: "BI ツール向けに集計済みの通話統計を取得 — サ�
 
 `GET /reports/summary`
 
-テナント単位の集計：総通話数、平均通話時間、成功率を期間別に分解します。
+期間内のテナント単位の合計値。共通パラメータのみを受け付けます。
 
 <CodeGroup>
 
 ```bash cURL
-curl "https://app.comdesk.com/api/v1/reports/summary?from=2026-05-01&to=2026-05-31" \
-  -H "Authorization: Bearer cdsk_live_xxx"
+curl "https://x.comdesk.com/api/v1/reports/summary?from=2026-05-01&to=2026-05-14" \
+  -H "Authorization: Bearer $COMDESK_API_KEY"
 ```
 
 </CodeGroup>
 
+<ResponseExample>
+
+```json 200
+{
+  "data": {
+    "from": "2026-05-01",
+    "to": "2026-05-14",
+    "total_calls": 1250,
+    "total_out_calls": 980,
+    "total_out_connected": 412,
+    "total_in_calls": 270,
+    "total_in_connected": 198,
+    "connection_rate": 42.04,
+    "total_duration_seconds": 183600,
+    "total_mybox": 87,
+    "total_appoints": 34
+  }
+}
+```
+
+</ResponseExample>
+
 ---
 
-## 通話レポート
+## 通話内訳レポート
 
 `GET /reports/calls`
 
-日付・スタッフ・ステータスで絞り込める通話別統計。詳細な BI 抽出に適しています。
+スタッフ・プロジェクト・日・週でグループ化した通話指標。BI 向けの抽出に適しています。
+
+<ParamField query="staff_id" type="integer">
+  スタッフで絞り込み。
+</ParamField>
+
+<ParamField query="group_by" default="staff" type="string">
+  `staff`（各行に `staff_id`、`staff_name`）、`project`（`project_id`、`project_name`）、`day` または `week`（`period_start`、`period_end`。週は月曜始まり）。
+</ParamField>
+
+<ParamField query="page" default="1" type="integer">
+</ParamField>
+
+<ParamField query="per_page" default="50" type="integer">
+  最大 200。
+</ParamField>
+
+`staff` / `project` の行は `total_out_calls` の降順、`day` / `week` の行は時系列順に並びます。
+
+<CodeGroup>
+
+```bash cURL
+curl "https://xxxx.comdesk.com/api/v1/reports/calls?from=2026-05-01&to=2026-05-14&group_by=day" \
+  -H "Authorization: Bearer $COMDESK_API_KEY"
+```
+
+</CodeGroup>
+
+<ResponseExample>
+
+```json 200
+{
+  "data": [
+    {
+      "staff_id": 123,
+      "staff_name": "Tanaka Taro",
+      "total_out_calls": 70,
+      "total_out_connected": 26,
+      "total_in_calls": 15,
+      "total_in_connected": 6,
+      "total_calls": 85,
+      "connected_calls": 32,
+      "connection_rate": 37.14,
+      "total_duration_seconds": 12600,
+      "avg_duration_seconds": 148,
+      "total_mybox": 9,
+      "total_appoints": 4
+    }
+  ],
+  "pagination": { "current_page": 1, "per_page": 50, "total": 12, "last_page": 1 }
+}
+```
+
+</ResponseExample>
 
 ---
 
@@ -54,7 +153,22 @@ curl "https://app.comdesk.com/api/v1/reports/summary?from=2026-05-01&to=2026-05-
 
 `GET /reports/users`
 
-スタッフ別の統計：通話数、トークレシオなどの関連指標。
+スタッフごとに 1 行。`staff_id`、`staff_name`（スタッフが削除済みの場合は `null`）、および指標フィールド（上記「指標フィールド」を参照）を含みます。
+
+<ParamField query="sort" default="total_out_calls" type="string">
+  `total_out_calls`、`total_in_calls`、`total_out_connected`、`connection_rate`、または `total_duration_seconds`。
+</ParamField>
+
+<ParamField query="order" default="desc" type="string">
+  `asc` または `desc`。
+</ParamField>
+
+<ParamField query="page" default="1" type="integer">
+</ParamField>
+
+<ParamField query="per_page" default="50" type="integer">
+  最大 100。
+</ParamField>
 
 <Note>
   31 日を超える期間のデータは、連続した範囲で複数回リクエストし、結果を自社側で結合してください。
