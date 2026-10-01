@@ -3,7 +3,7 @@ title: "エラー"
 description: "統一されたエラーエンベロープ、すべてのエラーコード、X-Request-ID を用いたデバッグ方法。"
 ---
 
-すべてのエラーは単一の JSON エンベロープを共有するため、クライアント側で統一的に処理できます。
+すべてのエラーは単一の JSON エンベロープを共有するため、クライアント側で統一的に処理できます。メッセージは、テナントの言語設定にかかわらず常に英語です。
 
 ## エラーエンベロープ
 
@@ -11,7 +11,7 @@ description: "統一されたエラーエンベロープ、すべてのエラー
 {
   "error": {
     "code": "invalid_api_key",
-    "message": "The provided API key is invalid or has been revoked.",
+    "message": "Missing or invalid API key.",
     "details": null
   }
 }
@@ -21,18 +21,18 @@ description: "統一されたエラーエンベロープ、すべてのエラー
 | --- | --- |
 | `code` | 安定した機械可読のエラーコード（分岐はこれで行う） |
 | `message` | 人間向けの説明（解析しないこと） |
-| `details` | 該当する場合のフィールド別バリデーションエラー、なければ `null` |
+| `details` | フィールド別のバリデーションエラー、再試行情報、または `null` |
 
-`422 validation_error` の場合、`details` に問題のフィールドが入ります：
+`422 validation_error` の場合、`details` には問題のある各フィールドとそのメッセージが入ります：
 
 ```json
 {
   "error": {
     "code": "validation_error",
-    "message": "The request payload failed validation.",
+    "message": "Validation failed.",
     "details": {
-      "phone_number": ["The phone_number format is invalid."],
-      "staff_id": ["The selected staff_id is invalid."]
+      "from": ["from date cannot be more than 180 days in the past."],
+      "per_page": ["The per page field must not be greater than 200."]
     }
   }
 }
@@ -42,24 +42,28 @@ description: "統一されたエラーエンベロープ、すべてのエラー
 
 | ステータス | コード | 意味 | 対処 |
 | --- | --- | --- | --- |
-| 401 | `invalid_api_key` | キーが欠落・不正・失効 | `Authorization` ヘッダーを確認。失効ならローテーション |
+| 401 | `invalid_api_key` | キーが欠落・不正・未知・無効化済み | `Authorization: Bearer` ヘッダーを確認。失効ならキーをローテーション |
 | 401 | `expired_api_key` | キーが有効期限切れ | 管理者に新しいキーの発行を依頼 |
-| 403 | `insufficient_scope` | キーに必要なスコープがない | 管理者にスコープの追加を依頼 |
-| 403 | `ip_not_allowed` | 送信元 IP が許可リストにない | サーバー IP を許可リストに追加 |
-| 404 | `resource_not_found` | ID が存在しない／自テナント外 | ID が自テナントのものか確認 |
+| 403 | `license_required` | テナントに必要なライセンスがない | `open_api` / `open_api_advanced` について Comdesk に連絡 |
+| 403 | `insufficient_scope` | キーに必要なスコープがない | 管理者にキーへのスコープ追加を依頼 |
+| 403 | `ip_not_allowed` | 送信元 IP が許可リストにない | サーバー IP をキーの許可リストに追加 |
+| 403 | `origin_not_allowed` | ブラウザの `Origin` が登録されていない | 管理者にオリジンの登録を依頼するか、バックエンドから呼び出す |
+| 404 | `resource_not_found` | ID が存在しない／自テナント外、またはパスが不明 | ID が自テナントのものか確認 |
+| 409 | `duplicate_external_id` | `external_id` が同じプロジェクト内で使用済み | 既存の顧客を更新するか、別の ID を使用 |
 | 422 | `validation_error` | バリデーション失敗 | `details` を確認し、該当フィールドを修正 |
-| 429 | `rate_limit_exceeded` | 当該分のリクエスト過多 | `Retry-After` 後にバックオフして再試行 |
+| 429 | `rate_limit_exceeded` | バーストまたは 1 分あたりの制限に到達 | `Retry-After` 後にバックオフして再試行 |
 | 429 | `quota_exceeded` | 日次・月次クォータ枯渇 | リセットを待つか Comdesk に連絡 |
 | 500 | `internal_error` | サーバー側エラー | `X-Request-ID` を記録しサポートに連絡 |
+| 503 | `internal_error` | レート制限／クォータのサービスが利用不可 | 時間をおいてバックオフして再試行 |
 
 ## X-Request-ID でのデバッグ
 
-すべてのレスポンスには `X-Request-ID` ヘッダー（そのリクエスト固有の UUID v4）が含まれます。独自の `X-Request-ID` を**送信**すると、Comdesk はそれをそのまま返すため、自社ログと Comdesk のログを相関できます。
+すべてのレスポンスには `X-Request-ID` ヘッダー（そのリクエスト固有の UUID v4）が含まれます。独自の `X-Request-ID` を**送信**することもでき、Comdesk はそれを使用してそのまま返すため、自社ログと Comdesk のログを相関できます。
 
 ```text
 X-Request-ID: 550e8400-e29b-41d4-a716-446655440000
 ```
 
 <Note>
-  エラーが発生したら、レスポンスの `X-Request-ID` を控えてください。同じ ID は **設定 → Open API → 利用ダッシュボード → 直近のリクエストログ** で確認でき、サポートはエンドツーエンドで追跡できます。これにより調査が桁違いに速くなります。
+  エラーが発生したら、レスポンスの `X-Request-ID` を控えてください。同じ ID は **設定 → Open API → 利用ダッシュボード → 直近のリクエストログ** で確認でき、サポートはエンドツーエンドで追跡できます。
 </Note>
