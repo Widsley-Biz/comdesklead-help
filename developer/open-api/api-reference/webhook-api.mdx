@@ -1,21 +1,66 @@
 ---
 title: "Webhook API"
-description: "Webhook サブスクリプションの登録・一覧・更新・削除・テスト。"
+description: "Webhook サブスクリプションの登録・一覧・取得・更新・削除・テスト。"
 ---
 
-ベース URL：`https://app.comdesk.com/api/v1`
+ベース URL：`https://xxxx.comdesk.com/api/v1`
 
 <Note>
-  Webhook 管理は **`open_api_advanced`** ライセンスと、`webhooks:manage` スコープを持つキーが必要です。イベントペイロード、署名検証、再送スケジュールは [Webhook ガイド](/developer/open-api/webhook) を参照してください。
+  Webhook 管理は **`open_api_advanced`** ライセンスと、`webhooks:manage` スコープを持つキーが必要です。イベントペイロード、署名検証、再送、自動無効化は [Webhook ガイド](/developer/open-api/webhook) を参照してください。
 </Note>
 
 | メソッド | パス | スコープ |
 | --- | --- | --- |
 | `POST` | `/webhooks` | `webhooks:manage` |
 | `GET` | `/webhooks` | `webhooks:manage` |
+| `GET` | `/webhooks/{webhookId}` | `webhooks:manage` |
 | `PUT` | `/webhooks/{webhookId}` | `webhooks:manage` |
 | `DELETE` | `/webhooks/{webhookId}` | `webhooks:manage` |
 | `POST` | `/webhooks/{webhookId}/test` | `webhooks:manage` |
+
+---
+
+## Webhook オブジェクト
+
+<ResponseField name="id" type="integer">
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  説明的な名前、または `null`。
+</ResponseField>
+
+<ResponseField name="url" type="string">
+</ResponseField>
+
+<ResponseField name="secret_prefix" type="string">
+  識別用の、署名シークレットの先頭 12 文字。
+</ResponseField>
+
+<ResponseField name="events" type="array">
+  購読しているイベント種別。
+</ResponseField>
+
+<ResponseField name="filters" type="object">
+  登録済みのフィルター、または `null`。配信時にはまだ適用されません。
+</ResponseField>
+
+<ResponseField name="is_active" type="boolean">
+  配信が行われるかどうか。
+</ResponseField>
+
+<ResponseField name="last_delivered_at" type="string">
+  最後に配信に成功した日時（ISO 8601）、または `null`。
+</ResponseField>
+
+<ResponseField name="consecutive_failures" type="integer">
+  配信試行の連続失敗回数（再送を含む）。1 回でも成功すると `0` にリセットされ、`10` に達すると Webhook は自動的に無効化されます。
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+</ResponseField>
+
+<ResponseField name="updated_at" type="string">
+</ResponseField>
 
 ---
 
@@ -26,33 +71,63 @@ description: "Webhook サブスクリプションの登録・一覧・更新・�
 ### ボディ
 
 <ParamField body="url" type="string" required>
-  `POST` 配信を受信する HTTPS エンドポイント。外部から到達可能である必要があります。
+  `POST` 配信を受信するエンドポイント、最大 2,048 文字。`https://` を使用し、パブリックなアドレスに解決される必要があります（プライベート／内部ホストは拒否されます）。それ以外は `422`。
 </ParamField>
 
 <ParamField body="events" type="array" required>
-  購読するイベント種別。例：`["call.completed", "call.missed"]`。[イベント一覧](/developer/open-api/webhook#イベント) を参照。
+  `call.started`、`call.completed`、`call.missed`、`call.voicemail`、`call.failed`、`customer.created`、`customer.updated`、`transcription.completed`、`summary.completed`、`ivr.trigger` のうち 1 つ以上。[Webhook ガイド](/developer/ja/webhooks) の「イベント」を参照してください — `call.failed` と `ivr.trigger` にはまだ発生元がありません。
+</ParamField>
+
+<ParamField body="name" type="string">
+  説明的な名前、最大 255 文字。
+</ParamField>
+
+<ParamField body="is_active" default="true" type="boolean">
+  Webhook が有効かどうか。
 </ParamField>
 
 <ParamField body="filters" type="object">
-  配信を絞り込みます。`project_ids`（整数の配列）と `call_status`（文字列の配列、例：`["missed_call", "no_answer"]`）に対応。
+  任意の `project_ids`（整数の配列）と `call_status`（文字列の配列、例：`["missed_call", "no_answer"]`）。それ以外のキーは拒否されます。
 </ParamField>
 
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://app.comdesk.com/api/v1/webhooks \
-  -H "Authorization: Bearer cdsk_live_xxx" \
+curl -X POST https://xxxx.comdesk.com/api/v1/webhooks \
+  -H "Authorization: Bearer $COMDESK_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "label": "Slack 通知",
+    "name": "Slack notifications",
     "url": "https://hooks.example.com/comdesk",
     "events": ["call.missed", "call.completed"],
-    "filters": { "project_ids": [456] },
-    "is_enabled": true
+    "is_active": true
   }'
 ```
 
 </CodeGroup>
+
+`201` レスポンスは、Webhook オブジェクトに `secret`（`X-Comdesk-Signature` に使われる署名シークレット）を加えたものです。シークレットが返されるのは**ここだけ**です。すぐに保存してください。
+
+<ResponseExample>
+
+```json 201
+{
+  "data": {
+    "id": 1,
+    "name": "Slack notifications",
+    "url": "https://hooks.example.com/comdesk",
+    "secret": "whsec_…",
+    "secret_prefix": "whsec_ab12cd",
+    "events": ["call.missed", "call.completed"],
+    "filters": null,
+    "is_active": true,
+    "created_at": "2026-07-15T18:40:00+09:00",
+    "message": "Store this secret now. It cannot be retrieved later."
+  }
+}
+```
+
+</ResponseExample>
 
 ---
 
@@ -60,7 +135,15 @@ curl -X POST https://app.comdesk.com/api/v1/webhooks \
 
 `GET /webhooks`
 
-テナントのすべての Webhook を返します。
+テナントのすべての Webhook を、Webhook オブジェクト（上記「Webhook オブジェクト」を参照）の配列として返します。
+
+---
+
+## Webhook の取得
+
+`GET /webhooks/{webhookId}`
+
+1 件の Webhook オブジェクト（上記「Webhook オブジェクト」を参照）を返します。存在しない場合は `404 resource_not_found` を返します。
 
 ---
 
@@ -68,7 +151,7 @@ curl -X POST https://app.comdesk.com/api/v1/webhooks \
 
 `PUT /webhooks/{webhookId}`
 
-登録と同じフィールドを受け付けます。変更分のみ送信してください。
+登録と同じルールで `name`、`url`、`events`、`is_active`、`filters` を受け付けます。変更分のみ送信してください。更新後の Webhook オブジェクト（上記「Webhook オブジェクト」を参照）を返します。自動無効化された Webhook を再度有効化するには `{"is_active": true}` を使用します。シークレットは変更できません — ローテーションするには、Webhook を削除して再登録してください。
 
 ---
 
@@ -76,7 +159,7 @@ curl -X POST https://app.comdesk.com/api/v1/webhooks \
 
 `DELETE /webhooks/{webhookId}`
 
-Webhook を論理削除します。配信は即時に停止します。
+Webhook を削除します。配信は即時に停止します。`204 No Content` を返します。
 
 ---
 
@@ -84,8 +167,50 @@ Webhook を論理削除します。配信は即時に停止します。
 
 `POST /webhooks/{webhookId}/test`
 
-設定済み URL にサンプルペイロードを送信し、接続性と署名処理を検証できます。
+署名付きの `webhook.test` イベントを設定済み URL に同期的に送信し（タイムアウト 5 秒、再送なし）、結果を返します。接続性と署名検証の確認に使用してください。
 
-<Warning>
-  テストエンドポイントの正確なレスポンスボディはソース PRD に記載されていません。稼働中の API でご確認ください。
-</Warning>
+テストペイロードは次のとおりです：
+
+```json
+{
+  "event": "webhook.test",
+  "event_id": "…",
+  "timestamp": "2026-07-15T18:47:14+09:00",
+  "data": { "webhook_id": 1, "message": "This is a test event from Comdesk." }
+}
+```
+
+<ResponseField name="success" type="boolean">
+  エンドポイントが `2xx` を返した場合は `true`。
+</ResponseField>
+
+<ResponseField name="status_code" type="integer">
+  エンドポイントが返した HTTP ステータス。応答がない場合は `null`。
+</ResponseField>
+
+<ResponseField name="latency_ms" type="integer">
+  往復時間（ミリ秒）。
+</ResponseField>
+
+<ResponseField name="error_type" type="string">
+  応答があった場合は `null`。それ以外は `timeout`、`connection`、`blocked`（パブリックアドレスのチェックで URL が拒否された）、または `unknown`。
+</ResponseField>
+
+<ResponseField name="error_message" type="string">
+  応答を受信できなかった場合のみ含まれます。
+</ResponseField>
+
+<ResponseExample>
+
+```json 200
+{
+  "data": {
+    "success": true,
+    "status_code": 200,
+    "latency_ms": 142,
+    "error_type": null
+  }
+}
+```
+
+</ResponseExample>
