@@ -3,74 +3,54 @@ title: "クイックスタート"
 description: "ゼロから約 5 分で、最初の認証付き Comdesk Open API リクエストを実行します。"
 ---
 
-このガイドでは、Comdesk Open API への最初のリクエストを順を追って説明します。最後には、コードから発信を行い、その結果が Webhook に届くところまで確認できます。
+このガイドでは、Comdesk Open API への最初のリクエストを順を追って説明します。最後には、コードからテナントの通話履歴を取得できるようになります。
 
 ## はじめる前に
 
-API キーが必要です。キーは開発者ではなく、**テナント管理者**が **設定 → Open API → API キー** で発行します。必要なスコープ（このクイックスタートでは `calls:initiate`）を持つキーを管理者に依頼してください。
+API キーが必要です。キーは開発者ではなく、**テナント管理者**が **設定 → Open API → API キー** で発行します。必要なスコープ（このクイックスタートでは `calls:read`）を持つキーを管理者に依頼してください。
 
 <Note>
-  まずは**テスト**キー（`cdsk_test_…`）から始めましょう。テストキーは実際の電話発信を行わないため、連携を安全に組み立てるのに最適です。本番キー（`cdsk_live_…`）への切り替えは、UAT 通過後に行ってください。
+  テスト用・サンドボックス用の別キーはありません — すべてのキーはテナントの実データに対して動作します。新しい連携を組み立てる際は、`calls:read` のような読み取り専用スコープを使うのが最も安全です。
 </Note>
 
 <Steps>
   <Step title="API キーを取得する">
-    管理者が **設定 → Open API → API キー → 新しい API キーを発行** を開き、`calls:initiate` スコープを選択し、**テスト**を選んでキーをコピーします。平文のキーは**一度だけ**表示されます。
+    管理者が **設定 → Open API → API キー → 新しい API キーを発行** を開き、`calls:read` スコープを選択してキーをコピーします。平文のキー（`cdsk_…`、50 文字）は**一度だけ**表示されます。`COMDESK_API_KEY` などの環境変数に保存してください。
   </Step>
   <Step title="Authorization ヘッダーを設定する">
     すべてのリクエストでキーを Bearer トークンとして送信します：
 
     ```text
-    Authorization: Bearer cdsk_xxxxxxxxxxxxxxxxxxxx
+    Authorization: Bearer <API キー>
     ```
   </Step>
-  <Step title="発信する">
-    顧客の電話番号、発信するスタッフ、プロジェクトを指定して `POST /api/v1/calls/initiate` を呼び出します。
+  <Step title="通話一覧を取得する">
+    期間（`YYYY-MM-DD`、最大 31 日間、開始日は 180 日前以内）を指定して `GET /api/v1/calls` を呼び出します。
 
     <CodeGroup>
 
     ```bash cURL
-    curl -X POST https://xxxx.comdesk.com/api/v1/calls/initiate \
-      -H "Authorization: Bearer cdsk_xxxxxxxxxxxxxxxxxxxx" \
-      -H "Content-Type: application/json" \
-      -d '{
-        "phone_number": "+819012345678",
-        "staff_id": 101,
-        "project_id": 456,
-        "external_id": "SF-LEAD-00100"
-      }'
+    curl "https://xxxx.comdesk.com/api/v1/calls?from=2026-09-01&to=2026-09-30&per_page=20" \
+      -H "Authorization: Bearer $COMDESK_API_KEY"
     ```
 
     ```javascript Node.js
-    const res = await fetch("https://app.comdesk.com/api/v1/calls/initiate", {
-      method: "POST",
-      headers: {
-        Authorization: "Bearer cdsk_test_xxxxxxxxxxxxxxxxxxxx",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        phone_number: "+819012345678",
-        staff_id: 101,
-        project_id: 456,
-        external_id: "SF-LEAD-00100",
-      }),
+    const params = new URLSearchParams({ from: "2026-09-01", to: "2026-09-30", per_page: "20" });
+    const res = await fetch(`https://xxxx.comdesk.com/api/v1/calls?${params}`, {
+      headers: { Authorization: `Bearer ${process.env.COMDESK_API_KEY}` },
     });
     const data = await res.json();
     console.log(data);
     ```
 
     ```python Python
+    import os
     import requests
     
-    res = requests.post(
-        "https://app.comdesk.com/api/v1/calls/initiate",
-        headers={"Authorization": "Bearer cdsk_test_xxxxxxxxxxxxxxxxxxxx"},
-        json={
-            "phone_number": "+819012345678",
-            "staff_id": 101,
-            "project_id": 456,
-            "external_id": "SF-LEAD-00100",
-        },
+    res = requests.get(
+        "https://xxxx.comdesk.com/api/v1/calls",
+        headers={"Authorization": f"Bearer {os.environ['COMDESK_API_KEY']}"},
+        params={"from": "2026-09-01", "to": "2026-09-30", "per_page": 20},
     )
     print(res.json())
     ```
@@ -78,42 +58,32 @@ API キーが必要です。キーは開発者ではなく、**テナント管�
     </CodeGroup>
   </Step>
   <Step title="レスポンスを読む">
-    成功すると、新しい通話の ID とステータスが返ります：
+    成功すると、1 ページ分の通話とページネーション情報が返ります：
 
     ```json
     {
-      "data": {
-        "call_id": "call_Kp2mRn9sQw",
-        "status": "initiating",
-        "staff_id": 101,
-        "initiated_at": "2026-06-02T08:30:00Z"
-      }
+      "data": [
+        {
+          "call_id": 150193036,
+          "call_type": "outbound",
+          "status": "connected",
+          "phone_number": "0901234****",
+          "staff_id": 123,
+          "staff_name": "Tanaka Taro",
+          "project_id": 456,
+          "started_at": "2026-09-10T10:00:00+09:00",
+          "duration_seconds": 330,
+          "external_id": null
+        }
+      ],
+      "pagination": { "current_page": 1, "per_page": 20, "total": 128, "last_page": 7 }
     }
     ```
 
-    レスポンスヘッダーの `X-Request-ID` に注目してください。デバッグ用に保管します（[エラー](/developer/ja/errors) を参照）。
+    上記の項目は一部を省略しています。すべてのフィールドは [通話](/developer/open-api/api-reference/calls) を参照してください。一覧レスポンスでは電話番号がマスクされます — 完全なレコードは `GET /api/v1/calls/{callId}` で取得してください。レスポンスヘッダーの `X-Request-ID` に注目し、デバッグ用に保管してください（[エラー](/developer/open-api/file-3) を参照）。
   </Step>
-  <Step title="レスポンスを読む">
-    成功すると、新しい通話の ID とステータスが返ります：
-
-    ```json
-    {
-      "data": {
-        "call_id": "call_Kp2mRn9sQw",
-        "status": "initiating",
-        "staff_id": 101,
-        "initiated_at": "2026-06-02T08:30:00Z"
-      }
-    }
-    ```
-
-    レスポンスヘッダーの `X-Request-ID` に注目してください。デバッグ用に保管します（[エラー](/developer/open-api/file-3) を参照）。
-  </Step>
-  <Step title="Webhook で結果を受け取る">
-    通話が完了すると、Comdesk は登録済みの Webhook URL に `call.completed` イベントを送信します。`POST /api/v1/webhooks` で登録し、受信時に `X-Comdesk-Signature` を検証してください — [Webhook](/developer/ja/webhooks) を参照。
-  </Step>
-  <Step title="Webhook で結果を受け取る">
-    通話が完了すると、Comdesk は登録済みの Webhook URL に `call.completed` イベントを送信します。`POST /api/v1/webhooks` で登録し、受信時に `X-Comdesk-Signature` を検証してください — [Webhook](/developer/open-api/webhook) を参照。
+  <Step title="Webhook でイベントを受け取る（任意）">
+    `open_api_advanced` ライセンスと `webhooks:manage` スコープを持つキーがあれば、`POST /api/v1/webhooks` で HTTPS エンドポイントを登録して `call.completed` などのイベントを発生と同時に受信できます。受信時には `X-Comdesk-Signature` を検証してください — [Webhook](/developer/open-api/webhook) を参照。
   </Step>
 </Steps>
 
@@ -121,11 +91,11 @@ API キーが必要です。キーは開発者ではなく、**テナント管�
 
 <CardGroup cols={2}>
   <Card title="認証" icon="key" href="/developer/open-api/authentication">
-    スコープ、キーの種類、IP 許可リストを詳しく解説。
+    スコープ、IP 許可リスト、キーのローテーションを詳しく解説。
   </Card>
 
   <Card title="通話 API" icon="phone" href="/developer/open-api/api-reference/call">
-    発信と通話取得の全パラメータ。
+    通話履歴の全パラメータとレスポンスフィールド。
   </Card>
 
   <Card title="Webhook" icon="bell" href="/developer/open-api/webhook">
