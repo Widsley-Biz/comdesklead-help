@@ -1,1 +1,266 @@
+---
+title: "通話"
+description: "AI 文字起こし・要約・音声分析を含む通話履歴の取得。"
+---
 
+ベース URL：`https://xxxx.comdesk.com/api/v1`
+
+| メソッド | パス | スコープ |
+| --- | --- | --- |
+| `GET` | `/calls` | `calls:read` |
+| `GET` | `/calls/{callId}` | `calls:read` |
+
+<Note>
+  `POST /calls/initiate`（クリックして発信）は現在のリリースでは提供されていません。フェーズ 2 で提供予定です。
+</Note>
+
+---
+
+## 通話オブジェクト
+
+<ResponseField name="call_id" type="integer">
+  通話履歴 ID。同じ値を `GET /calls/{callId}` に指定でき、Webhook では `call_id` として含まれます。
+</ResponseField>
+
+<ResponseField name="call_type" type="string">
+  `outbound`、`inbound`、`outbound_no_answer`、`inbound_no_answer`、`internal`、`voicemail`、`transfer`、`sms_inbound`、`sms_outbound`、`ivr_outbound` のいずれか。`voicemail` は、自社の留守番電話で録音された着信と、相手先の留守番電話につながった発信の両方を含みます。
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  テナントで設定されている通話結果名。例：`connected`。
+</ResponseField>
+
+<ResponseField name="phone_number" type="string">
+  相手先の番号。一覧レスポンスではマスクされます。
+</ResponseField>
+
+<ResponseField name="caller_number" type="string">
+  発信者番号（通知番号）。一覧レスポンスではマスクされます。
+</ResponseField>
+
+<ResponseField name="staff_id" type="integer">
+</ResponseField>
+
+<ResponseField name="staff_name" type="string">
+</ResponseField>
+
+<ResponseField name="project_id" type="integer">
+</ResponseField>
+
+<ResponseField name="project_name" type="string">
+</ResponseField>
+
+<ResponseField name="customer_id" type="integer">
+  通話が顧客に紐づいていない場合は `null`。
+</ResponseField>
+
+<ResponseField name="customer_name" type="string">
+  通話が顧客に紐づいていない場合は `null`。
+</ResponseField>
+
+<ResponseField name="started_at" type="string">
+  オフセット付き ISO 8601。例：`2026-03-10T10:00:00+09:00`。
+</ResponseField>
+
+<ResponseField name="ended_at" type="string">
+  ISO 8601、または `null`。
+</ResponseField>
+
+<ResponseField name="duration_seconds" type="integer">
+</ResponseField>
+
+<ResponseField name="memo" type="string">
+  通話に対するスタッフのメモ。
+</ResponseField>
+
+<ResponseField name="recall_at" type="string">
+  再架電の予定日時（ISO 8601）、または `null`。
+</ResponseField>
+
+<ResponseField name="transcription" type="string">
+  音声認識結果（AI 有効時）。それ以外は `null`。
+</ResponseField>
+
+<ResponseField name="summary" type="string">
+  AI 生成の要約（利用可能時）。それ以外は `null`。
+</ResponseField>
+
+<ResponseField name="speech_analysis" type="object">
+  `null`、または `talk_ratio`（オペレーターのトークレシオ、0〜1）、`speech_speed`（文字／秒）、`filler_count`、`silence_ratio`、`overlap_count`、`question_count`、`rally_count`（発話の切り替え回数）を持つオブジェクト。
+</ResponseField>
+
+<ResponseField name="recording_url" type="string">
+  録音リンク（録音有効時）。それ以外は `null`。
+</ResponseField>
+
+<ResponseField name="external_id" type="string">
+  設定済みの相関 ID。未設定の場合は `null`。
+</ResponseField>
+
+<Note>
+  `GET /calls` のレスポンスでは、`phone_number` と `caller_number` がマスクされます — 末尾 4 桁が `****` に置き換えられます（例：`0901234****`）。`GET /calls/{callId}` ではマスクされずに返ります。
+</Note>
+
+---
+
+## 通話一覧
+
+`GET /calls`
+
+指定した期間の通話履歴をページネーション付きで返します。デフォルトでは新しい順です。
+
+### クエリパラメータ
+
+<ParamField query="from" type="string" required>
+  開始日、`YYYY-MM-DD`（例：`2026-03-01`）。最大 **180 日**前まで指定できます。
+</ParamField>
+
+<ParamField query="to" type="string" required>
+  終了日、`YYYY-MM-DD`。`from` 以降の日付。`from`→`to` の範囲は **31 日**を超えられません。いずれかのルールに違反すると `422` を返します。
+</ParamField>
+
+<ParamField query="project_id" type="integer">
+  プロジェクトで絞り込み。
+</ParamField>
+
+<ParamField query="staff_id" type="integer">
+  スタッフで絞り込み。
+</ParamField>
+
+<ParamField query="call_type" type="string">
+  `outbound` または `inbound`。
+</ParamField>
+
+<ParamField query="status" type="string">
+  カンマ区切りの通話結果名。例：`connected,no_answer`。
+</ParamField>
+
+<ParamField query="phone_number" type="string">
+  相手先の番号の部分一致、最大 20 文字。
+</ParamField>
+
+<ParamField query="page" default="1" type="integer">
+  ページ番号。
+</ParamField>
+
+<ParamField query="per_page" default="50" type="integer">
+  1 ページあたりの件数、最大 200。
+</ParamField>
+
+<ParamField query="sort" default="started_at" type="string">
+  `started_at` または `duration`。
+</ParamField>
+
+<ParamField query="order" default="desc" type="string">
+  `asc` または `desc`。
+</ParamField>
+
+<CodeGroup>
+
+```bash cURL
+curl "https://xxxx.comdesk.com/api/v1/calls?from=2026-03-01&to=2026-03-31&status=connected" \
+  -H "Authorization: Bearer $COMDESK_API_KEY"
+```
+
+</CodeGroup>
+
+<ResponseExample>
+
+```json 200
+{
+  "data": [
+    {
+      "call_id": 150193036,
+      "call_type": "outbound",
+      "status": "connected",
+      "phone_number": "0901234****",
+      "caller_number": "031234****",
+      "staff_id": 123,
+      "staff_name": "Tanaka Taro",
+      "project_id": 456,
+      "project_name": "Sales Project A",
+      "customer_id": 78901,
+      "customer_name": "Test Corporation",
+      "started_at": "2026-03-10T10:00:00+09:00",
+      "ended_at": "2026-03-10T10:05:30+09:00",
+      "duration_seconds": 330,
+      "memo": "Appointment secured",
+      "recall_at": null,
+      "transcription": null,
+      "summary": null,
+      "speech_analysis": null,
+      "recording_url": null,
+      "external_id": "SF-LEAD-001"
+    }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "per_page": 50,
+    "total": 128,
+    "last_page": 3
+  }
+}
+```
+
+</ResponseExample>
+
+---
+
+## 通話の取得
+
+`GET /calls/{callId}`
+
+マスクされていない完全な通話オブジェクト（上記「通話オブジェクト」を参照）を返します。利用可能な場合は AI 由来のフィールドも含みます。通話が自テナント内に存在しない場合は `404 resource_not_found` を返します。
+
+<ParamField path="callId" type="integer" required>
+  通話 ID（数値）。
+</ParamField>
+
+<CodeGroup>
+
+```bash cURL
+curl "https://xxxx.comdesk.com/api/v1/calls/150193036" \
+  -H "Authorization: Bearer $COMDESK_API_KEY"
+```
+
+</CodeGroup>
+
+<ResponseExample>
+
+```json 200
+{
+  "data": {
+    "call_id": 150193036,
+    "call_type": "outbound",
+    "status": "connected",
+    "phone_number": "09012345678",
+    "caller_number": "0312345678",
+    "staff_id": 123,
+    "staff_name": "Tanaka Taro",
+    "project_id": 456,
+    "project_name": "Sales Project A",
+    "customer_id": 78901,
+    "customer_name": "Test Corporation",
+    "started_at": "2026-03-10T10:00:00+09:00",
+    "ended_at": "2026-03-10T10:05:30+09:00",
+    "duration_seconds": 330,
+    "memo": "Appointment secured",
+    "recall_at": null,
+    "transcription": "Hello, this is Tanaka from Comdesk…",
+    "summary": "Customer requested a quote and asked for a callback next week.",
+    "speech_analysis": {
+      "talk_ratio": 0.45,
+      "speech_speed": 5.2,
+      "filler_count": 3,
+      "silence_ratio": 0.08,
+      "overlap_count": 2,
+      "question_count": 8,
+      "rally_count": 15
+    },
+    "recording_url": "https://…",
+    "external_id": "SF-LEAD-001"
+  }
+}
+```
+
+</ResponseExample>
