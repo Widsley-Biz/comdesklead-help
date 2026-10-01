@@ -1,6 +1,6 @@
 ---
 title: "Webhook"
-description: "リアルタイムイベントの購読、署名検証、リプレイ対策、再送スケジュールを理解します。"
+description: "リアルタイムイベントの購読、署名検証、リプレイ対策、再送と自動無効化を理解します。"
 ---
 
 Webhook は、イベント発生と同時にあなたの HTTPS エンドポイントへイベントを送信します。ポーリングは不要です。登録と管理は [Webhook API](/developer/open-api/api-reference/webhook-api) で行います。
@@ -11,94 +11,111 @@ Webhook は、イベント発生と同時にあなたの HTTPS エンドポイ�
 
 ## イベント
 
-| イベント | 発生タイミング | 主なペイロードデータ |
+| イベント | 発生タイミング | `data` のフィールド |
 | --- | --- | --- |
-| `call.completed` | 通話が完了し保存されたとき | 通話時間、ステータス、メモ、文字起こし、要約、音声分析、録音 URL |
-| `call.missed` | 着信が応答されなかったとき | 発信者番号、着信番号、不在着信時刻 |
-| `call.started` | 通話が接続したとき | call\_id、番号、キャリア |
-| `transcription.completed` | AI 文字起こしが完了したとき | call\_id、全文 |
-| `summary.completed` | AI 要約が完了したとき | call\_id、要約テキスト |
-| `customer.created` | 顧客が登録されたとき | customer\_id、名前、電話番号、プロジェクト、external\_id |
-| `customer.updated` | 顧客が更新されたとき | customer\_id、変更フィールド |
+| `call.started` | 通話レコードが作成されたとき（発信開始時） | `call_id`, `phone_number`, `staff_id`, `project_id`, `started_at` |
+| `call.completed` | PBX から通話終了が通知され、応答があったとき | `call_id`, `phone_number`, `staff_id`, `project_id`, `started_at`, `duration_seconds` |
+| `call.missed` | PBX から通話終了が通知され、応答がなかったとき | `call.completed` と同じ（`duration_seconds` は `null`） |
+| `call.voicemail` | 通話が留守番電話の録音で終了したとき | `call.completed` と同じ |
+| `transcription.completed` | AI 文字起こしが完了したとき | `call_id`, `transcription`（先頭 5,000 文字） |
+| `summary.completed` | AI 要約が完了したとき | `call_id`, `summary`（先頭 5,000 文字） |
+| `customer.created` | `POST /customers` または一括登録のバッチで顧客が作成されたとき | `customer_id`, `name`, `tel1`, `project_id`, `external_id` |
+| `customer.updated` | `PUT /customers/{customerId}` で顧客が更新されたとき | `customer_id`, `changed_fields`, `external_id` |
+
+`call.failed` と `ivr.trigger` は Webhook の登録時に受け付けられますが、**まだ発生元がありません** — 現時点では購読しても何も配信されません。`webhook.test` は [Webhook API](/developer/open-api/api-reference/webhook-api) の「Webhook のテスト」エンドポイントからのみ送信され、購読することはできません。
+
+文字起こしや要約の全文は `GET /calls/{callId}` で取得してください。
 
 ## ペイロードの形
 
-各配信は次のエンベロープを持つ `POST` です：
+各配信は `Content-Type: application/json` の `POST` で、次のエンベロープを持ちます：
 
 ```json
 {
-  "event_id": "evt_7f3a9b2c-1234-5678-abcd-ef0123456789",
-  "timestamp": 1748142000,
+  "event_id": "9b7a1f2c-3d4e-4f50-9a61-2b3c4d5e6f70",
+  "timestamp": "2026-07-15T18:47:14+09:00",
   "event": "call.completed",
   "data": {
-    "call_id": "call_abc123",
-    "status": "connected",
-    "duration_seconds": 330,
-    "summary": "新製品の提案について議論。来週デモを予定。",
-    "external_id": "SF-LEAD-001"
+    "call_id": 1234567,
+    "phone_number": "09012345678",
+    "staff_id": 123,
+    "project_id": 456,
+    "started_at": "2026-07-15T18:42:01+09:00",
+    "duration_seconds": 330
   }
 }
 ```
 
 | フィールド | 説明 |
 | --- | --- |
-| `event_id` | イベントごとに一意な UUID（再送でも**同じ**値を再利用） |
-| `timestamp` | イベント生成時刻の Unix エポック秒 |
+| `event_id` | イベントごとに一意な UUID v4（再送でも**同じ**値を再利用） |
+| `timestamp` | オフセット付き ISO 8601（Asia/Tokyo、`+09:00`）。イベントのディスパッチ時に確定し、再送時には更新されません |
 | `event` | イベント種別 |
-| `data` | イベント固有のペイロード |
+| `data` | イベント固有のペイロード（上の表を参照）。形ではなく `event` に基づいてパース方法を選んでください |
+
+### リクエストヘッダー
+
+| ヘッダー | 値 |
+| --- | --- |
+| `X-Comdesk-Signature` | `sha256=<hex>` — 生のボディの HMAC-SHA256 |
+| `X-Comdesk-Event` | `event` と同じ値 |
+| `X-Comdesk-Delivery` | `event_id` と同じ値（`webhook.test` では送信されません） |
+| `User-Agent` | `Comdesk-Webhook/1.0`（`webhook.test` では `Comdesk-Webhook-Tester/1.0`） |
 
 ## 署名を検証する
 
-各配信には `X-Comdesk-Signature` ヘッダー（生のリクエストボディの HMAC-SHA256、Webhook に紐づく API キーを鍵とする）が付きます。偽造リクエストを拒否するため、**処理前に必ず検証**してください。
+`X-Comdesk-Signature` は、`sha256=` に続けて、生のリクエストボディの HMAC-SHA256 を 16 進数で表したものです。鍵には、Webhook 作成時に一度だけ返される **Webhook シークレット**（`whsec_…`）を使用します。偽造リクエストを拒否するため、**処理前に必ず検証**してください。
 
 <CodeGroup>
 
 ```javascript Node.js
 import crypto from "crypto";
 
-function verify(rawBody, signature, secret) {
-  const expected = crypto
-    .createHmac("sha256", secret)
-    .update(rawBody)
-    .digest("hex");
-  return crypto.timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(expected)
-  );
+function verify(rawBody, header, secret) {
+  const expected =
+    "sha256=" + crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
+  const a = Buffer.from(header || "");
+  const b = Buffer.from(expected);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 ```
 
 ```python Python
 import hmac, hashlib
 
-def verify(raw_body: bytes, signature: str, secret: str) -> bool:
-    expected = hmac.new(secret.encode(), raw_body, hashlib.sha256).hexdigest()
-    return hmac.compare_digest(signature, expected)
+def verify(raw_body: bytes, header: str, secret: str) -> bool:
+    expected = "sha256=" + hmac.new(secret.encode(), raw_body, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(header or "", expected)
 ```
 
 </CodeGroup>
-
-<Warning>
-  HMAC は、JSON のパースや再シリアライズ前の**生の**リクエストボディのバイト列に対して計算してください。JSON を再エンコードするとバイト列が変わり、検証が失敗します。比較は定数時間で行ってください。
-</Warning>
 
 ## リプレイ対策
 
 署名は真正性を証明しますが、新しさは証明しません。次も併せて強制してください：
 
 1. 処理した各イベントの **`event_id` を保存**し、**24 時間以内の重複を拒否**します（再送は同じ `event_id` を再利用するため、ハンドラーの冪等性も担保されます）。
-2. **`timestamp` が受信時刻から 5 分以上ずれているイベントを拒否**します。
+2. `timestamp` が自社の再送許容範囲よりはるかに古い**古いイベントを拒否**します。再送は元の `timestamp` を保持し、最大で約 27 時間後に届くことがあるため、再送された配信を破棄してもよい場合を除き、短い（例：5 分の）ウィンドウは適用しないでください。
 
-## 再送スケジュール
+## 配信と再送
 
-エンドポイントが **10 秒**以内に応答しない、または 2xx 以外を返した場合、Comdesk は指数バックオフで最大 **5 回**再送します：
+Comdesk は `https://` の URL にのみ配信し、リダイレクトには従いません。エンドポイントが **10 秒**以内に応答しない、または 2xx 以外のステータスを返した場合、配信は再送されます。各イベントの試行回数は合計で最大 **6 回**です：
 
-| 試行 | 失敗後の遅延 |
+| 試行 | 送信タイミング |
 | --- | --- |
-| 1 | 1 分 |
-| 2 | 5 分 |
-| 3 | 30 分 |
-| 4 | 2 時間 |
-| 5 | 24 時間 |
+| 1 | 即時 |
+| 2 | 1 回目の失敗から 1 分後 |
+| 3 | その 5 分後 |
+| 4 | その 30 分後 |
+| 5 | その 2 時間後 |
+| 6 | その 24 時間後 |
 
-イベントを**受理**したら（キューに永続化したら）すぐに `2xx` を返し、その後に非同期で処理してください。すべての配信試行は管理画面の Webhook 配信ログに記録されます。
+イベントを**受理**したら（キューに永続化したら）すぐに `2xx` を返し、その後に非同期で処理してください。
+
+## 自動無効化
+
+失敗した試行は再送も含めてすべて Webhook の `consecutive_failures` カウンターを増やし、配信が 1 回でも成功すると `0` にリセットされます。**10 回連続で失敗**すると、Webhook は `is_active: false` に設定され、イベントを受信しなくなります。エンドポイントを修正した後、`PUT /webhooks/{webhookId}` に `{"is_active": true}` を送って再度有効化してください。
+
+<Note>
+  配信フィルター（`filters.project_ids`、`filters.call_status`）は登録できますが、**まだ適用されていません** — 購読したイベントはすべて配信されます。当面は `data` 内のフィールドを使って自社側で絞り込んでください。
+</Note>
