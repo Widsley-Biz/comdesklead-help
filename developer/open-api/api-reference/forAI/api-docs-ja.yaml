@@ -15,128 +15,12 @@ info:
     🇬🇧 [English version → /api/docs/en](/api/docs/en)'
   contact:
     name: Comdesk デベロッパーサポート
-    email: dev@comdesk.jp
+    email: dev@comdesk.com
   version: 1.0.0
 servers:
-- url: /
-  description: 現在のサーバー
-- url: https://dl.comdesk.jp
-  description: 開発環境 (dl)
-- url: https://sl.comdesk.jp
-  description: ステージング (sl)
-- url: https://pl.comdesk.jp
-  description: 本番環境 (pl)
+- url: https://xxxx.comdesk.com
+  description: テナントのドメイン（xxxx をご利用のサブドメインに置き換えてください）
 paths:
-  /api/v1/calls/initiate:
-    post:
-      tags:
-      - 通話（Calls）
-      summary: アウトバウンドコール発信（Click to Call）
-      description: CRMから外線発信を開始します。発信追跡用のcall_idを返します。スコープ `calls:initiate` が必要です。
-      operationId: callsInitiate
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              required:
-              - phone_number
-              - staff_id
-              - project_id
-              properties:
-                phone_number:
-                  description: 発信先電話番号（E.164形式または日本国内形式）
-                  type: string
-                  pattern: ^[0-9\-\+]{7,20}$
-                  example: 09012345678
-                staff_id:
-                  description: 発信するスタッフのID
-                  type: integer
-                  example: 123
-                project_id:
-                  description: 通話を記録するプロジェクトID
-                  type: integer
-                  example: 456
-                external_id:
-                  description: CRM側のレコードIDとの紐付け用
-                  type: string
-                  example: SF-LEAD-001
-                  nullable: true
-                  maxLength: 255
-                metadata:
-                  description: CRMからの任意メタデータ（保存されますが処理されません）
-                  type: object
-                  example:
-                    crm_url: https://crm.example.com/leads/001
-                  nullable: true
-              type: object
-      responses:
-        '200':
-          description: 発信が正常に開始されました
-          content:
-            application/json:
-              schema:
-                properties:
-                  data:
-                    properties:
-                      call_id:
-                        type: string
-                        example: call_abc123
-                      status:
-                        type: string
-                        example: initiating
-                      phone_number:
-                        type: string
-                        example: 09012345678
-                      staff_id:
-                        type: integer
-                        example: 123
-                      initiated_at:
-                        type: string
-                        format: date-time
-                        example: '2026-03-10T10:00:00+09:00'
-                    type: object
-                type: object
-        '401':
-          description: APIキーが無効です
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '403':
-          description: スコープ calls:initiate が不足しています
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '409':
-          description: external_idが重複しています
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '422':
-          description: バリデーションエラー
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-        '429':
-          description: レート制限超過
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-      security:
-      - BearerAuth: []
-      x-acceptance-criteria:
-      - ✅ phone_number、staff_id、project_idを送信して外線発信を開始できること
-      - ✅ CRMレコードとの紐付け用にexternal_idを含めることができること
-      - ✅ レスポンス200にcall_idとstatus initiatingが含まれること
-      - ❌ phone_number、staff_id、project_idが無効な場合、HTTP 422で拒否されること
-      - ❌ external_idが重複する場合（同じexternal_idのアクティブな通話が存在）、HTTP 409で拒否されること
-      - 🔒 スコープ calls:initiate が必要
-      - 🪪 X-Request-IDヘッダーがレスポンスにエコーされること
   /api/v1/calls:
     get:
       tags:
@@ -338,16 +222,41 @@ paths:
       parameters:
       - name: project_id
         in: query
-        description: プロジェクトIDでフィルタ
-        required: false
+        description: プロジェクトIDでフィルタ（必須）
+        required: true
         schema:
           type: integer
-      - name: keyword
+      - name: external_id
+        in: query
+        description: 外部システムIDの完全一致検索（結果は0件または1件）
+        required: false
+        schema:
+          type: string
+          maxLength: 255
+      - name: search
         in: query
         description: 名前・電話番号の部分一致検索
         required: false
         schema:
           type: string
+          maxLength: 255
+      - name: sort
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - name
+          - created_at
+          - updated_at
+      - name: order
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - asc
+          - desc
       - name: page
         in: query
         required: false
@@ -360,7 +269,7 @@ paths:
         schema:
           type: integer
           default: 50
-          maximum: 200
+          maximum: 100
       responses:
         '200':
           description: 顧客一覧
@@ -416,8 +325,7 @@ paths:
       tags:
       - 顧客（Customers）
       summary: 顧客登録
-      description: 新規顧客を登録します。`external_id` はCRM側レコードとの紐付けに使用します。スコープ `customers:write`
-        が必要です。
+      description: 新規顧客を登録します。`external_id` はCRM側レコードとの紐付けに使用します。スコープ `customers:write` が必要です。
       operationId: customersCreate
       requestBody:
         required: true
@@ -446,14 +354,19 @@ paths:
                   nullable: true
                   maxLength: 255
                 tel1:
+                  description: 電話番号。E.164形式（+819012345678）または0始まりの国内形式（0312345678）。区切りのハイフンは可。それ以外の形式は422で拒否されます。
                   type: string
+                  pattern: ^(?:\+[1-9](?:[- ]?\d){7,14}|0(?:[- ]?\d){9,10})$
                   example: 0312345678
                   nullable: true
                   maxLength: 30
                 tel2:
+                  description: tel1と同じ形式ルールです。
                   type: string
+                  pattern: ^(?:\+[1-9](?:[- ]?\d){7,14}|0(?:[- ]?\d){9,10})$
                   example: 09012345678
                   nullable: true
+                  maxLength: 30
                 prefecture:
                   type: string
                   example: 東京都
@@ -544,8 +457,8 @@ paths:
     post:
       tags:
       - 顧客（Customers）
-      summary: 顧客一括登録
-      description: 1リクエストで最大500件の顧客を一括登録します。スコープ `customers:write` が必要です。
+      summary: 顧客一括登録（非同期）
+      description: 最大500件の顧客登録をキューに投入し、`batch_id` を即座に返します。レスポンス時点では顧客はまだ作成されて**いません**。各レコードの結果は `GET /api/v1/customers/bulk/{batch_id}` をポーリングして取得してください。スコープ `customers:write` が必要です。
       operationId: customersBulkCreate
       requestBody:
         required: true
@@ -574,34 +487,45 @@ paths:
                         example: 株式会社テスト
                         maxLength: 255
                       tel1:
+                        description: E.164形式または0始まりの国内形式。区切りのハイフンは可。形式不正が1件でもあるとバッチ全体が422で拒否されます。
                         type: string
+                        pattern: ^(?:\+[1-9](?:[- ]?\d){7,14}|0(?:[- ]?\d){9,10})$
                         example: 0312345678
+                        nullable: true
+                        maxLength: 30
+                      tel2:
+                        description: tel1と同じ形式ルールです。
+                        type: string
+                        pattern: ^(?:\+[1-9](?:[- ]?\d){7,14}|0(?:[- ]?\d){9,10})$
+                        example: 09012345678
                         nullable: true
                         maxLength: 30
                     type: object
                   maxItems: 500
               type: object
       responses:
-        '201':
-          description: 一括登録完了
+        '202':
+          description: 一括登録を受け付けキューに投入しました。この時点では顧客はまだ作成されていません。
           content:
             application/json:
               schema:
                 properties:
                   data:
                     properties:
-                      created_count:
+                      batch_id:
+                        description: GET /api/v1/customers/bulk/{batch_id} のポーリングに使用します
+                        type: string
+                        format: uuid
+                        example: b3f1c2a0-9d7e-4c11-88a2-1f0b5c6de9d4
+                      status:
+                        type: string
+                        example: pending
+                        enum:
+                        - pending
+                      total:
+                        description: 処理対象として受け付けたレコード数
                         type: integer
-                        example: 97
-                      skipped_count:
-                        description: external_id重複によりスキップされた件数
-                        type: integer
-                        example: 3
-                      errors:
-                        description: レコードごとのエラー詳細
-                        type: array
-                        items:
-                          type: object
+                        example: 100
                     type: object
                 type: object
         '401':
@@ -622,6 +546,136 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ValidationErrorResponse'
+        '429':
+          description: レート制限超過
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+      - BearerAuth: []
+  /api/v1/customers/bulk/{batch_id}:
+    get:
+      tags:
+      - 顧客（Customers）
+      summary: 顧客一括登録ステータス取得
+      description: '`POST /api/v1/customers/bulk` で投入したバッチの進捗と、各レコードの結果を返します。数秒間隔でのポーリングを推奨します（目安は1件あたり約80ミリ秒）。スコープ `customers:write` が必要です。'
+      operationId: customersBulkStatus
+      parameters:
+      - name: batch_id
+        in: path
+        description: POST /api/v1/customers/bulk が返した batch_id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: バッチのステータス
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    properties:
+                      batch_id:
+                        type: string
+                        format: uuid
+                        example: b3f1c2a0-9d7e-4c11-88a2-1f0b5c6de9d4
+                      status:
+                        description: '`pending`（キュー投入済み・未着手）→ `processing` → `completed` / `failed`。一定時間`pending`のまま着手されないバッチは`failed`となり、理由が `failure_reason` に入ります（ポーリングが終わらない状態を避けるため）。'
+                        type: string
+                        example: completed
+                        enum:
+                        - pending
+                        - processing
+                        - completed
+                        - failed
+                      total:
+                        description: 送信されたレコードの総数
+                        type: integer
+                        example: 100
+                      succeeded:
+                        type: integer
+                        example: 97
+                      failed:
+                        type: integer
+                        example: 3
+                      results:
+                        description: 登録に成功したレコードごとの結果。完了までは空配列です。
+                        type: array
+                        items:
+                          properties:
+                            index:
+                              description: 送信したcustomers配列内でのインデックス
+                              type: integer
+                              example: 0
+                            status:
+                              type: string
+                              example: created
+                            customer_id:
+                              type: integer
+                              example: 78901
+                            external_id:
+                              type: string
+                              example: CRM-LEAD-001
+                              nullable: true
+                          type: object
+                      errors:
+                        description: 登録に失敗したレコードごとのエラー詳細。完了までは空配列です。
+                        type: array
+                        items:
+                          properties:
+                            index:
+                              description: 送信したcustomers配列内でのインデックス
+                              type: integer
+                              example: 1
+                            code:
+                              type: string
+                              example: duplicate_external_id
+                            message:
+                              type: string
+                              example: Duplicate external_id within the same project.
+                          type: object
+                      failure_reason:
+                        description: '`status` が `failed` の場合のみ設定される失敗理由。それ以外は null です。'
+                        type: string
+                        example: Queue worker did not start this batch within 15 minutes. The openapi queue is not being consumed on this environment; the records were not created. Re-submit the batch once the worker is running.
+                        nullable: true
+                      created_at:
+                        type: string
+                        format: date-time
+                        example: '2026-08-11T18:47:14+09:00'
+                      started_at:
+                        type: string
+                        format: date-time
+                        example: '2026-08-11T18:47:15+09:00'
+                        nullable: true
+                      completed_at:
+                        type: string
+                        format: date-time
+                        example: '2026-08-11T18:47:53+09:00'
+                        nullable: true
+                    type: object
+                type: object
+        '401':
+          description: APIキーが無効です
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: スコープ customers:write が不足しています
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: バッチが存在しない、または他テナントのバッチです
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '429':
           description: レート制限超過
           content:
@@ -753,12 +807,18 @@ paths:
                   type: string
                   nullable: true
                 tel1:
+                  description: E.164形式または0始まりの国内形式。区切りのハイフンは可。それ以外の形式は422で拒否されます。nullを送ると値をクリアします。
                   type: string
+                  pattern: ^(?:\+[1-9](?:[- ]?\d){7,14}|0(?:[- ]?\d){9,10})$
                   example: 0312345679
                   nullable: true
+                  maxLength: 30
                 tel2:
+                  description: tel1と同じ形式ルールです。
                   type: string
+                  pattern: ^(?:\+[1-9](?:[- ]?\d){7,14}|0(?:[- ]?\d){9,10})$
                   nullable: true
+                  maxLength: 30
                 prefecture:
                   type: string
                   nullable: true
@@ -827,116 +887,12 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
       security:
       - BearerAuth: []
-  /api/v1/ivr/trigger:
-    post:
-      tags:
-      - IVR
-      summary: IVR自動発信をトリガー
-      description: 指定した電話番号への IVR 自動発信をキューに追加します。コールは PBX キューエンドポイント経由で非同期にディスパッチされます。追跡用の
-        session_id を返します。スコープ `ivr:trigger` が必要です。
-      operationId: ivrTriggerJa
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              required:
-              - phone_number
-              - project_id
-              properties:
-                phone_number:
-                  description: 発信先電話番号（数字・ハイフン・プラス記号、7〜20文字）
-                  type: string
-                  pattern: ^[0-9\-\+]{7,20}$
-                  example: 09012345678
-                project_id:
-                  description: 通話を記録するプロジェクト ID（呼び出し元テナントに属するもの）
-                  type: integer
-                  example: 1
-                queue_id:
-                  description: ルーティング先ワークグループキュー ID（呼び出し元テナントに属するもの、任意）
-                  type: integer
-                  example: 7
-                  nullable: true
-                external_id:
-                  description: 重複排除・紐付け用 CRM レコード ID（任意）
-                  type: string
-                  example: SF-LEAD-001
-                  nullable: true
-                  maxLength: 255
-                metadata:
-                  description: CRM から渡す任意メタデータ（最大 1 KB、保存のみ・処理なし）
-                  type: object
-                  example:
-                    crm_url: https://crm.example.com/leads/001
-                  nullable: true
-              type: object
-      responses:
-        '200':
-          description: IVR 発信をキューに追加しました
-          content:
-            application/json:
-              schema:
-                properties:
-                  data:
-                    properties:
-                      session_id:
-                        type: string
-                        example: ivr_12345
-                      status:
-                        type: string
-                        example: queued
-                      phone_number:
-                        type: string
-                        example: 09012345678
-                      project_id:
-                        type: integer
-                        example: 1
-                      initiated_at:
-                        type: string
-                        format: date-time
-                        example: '2026-03-10T10:00:00+09:00'
-                    type: object
-                type: object
-        '401':
-          description: API キーが無効
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '403':
-          description: スコープ ivr:trigger が不足
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '409':
-          description: external_id が重複（アクティブな IVR セッションが存在）
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '422':
-          description: バリデーションエラー
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-        '429':
-          description: レート制限超過
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-      security:
-      - BearerAuth: []
   /api/v1/reports/summary:
     get:
       tags:
       - レポート（Reports）
       summary: 通話統計サマリー取得
-      description: 指定した期間の通話統計を集計して返します。最大31日間、最大180日前まで。スコープ `reports:read` とライセンス
-        `open_api_advanced` が必要です。
+      description: 指定した期間の通話統計を集計して返します。最大31日間、最大180日前まで。スコープ `reports:read` とライセンス `open_api_advanced` が必要です。
       operationId: reportsSummary
       parameters:
       - name: from
@@ -1022,7 +978,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '422':
-          description: 31日超、from が180日以上前、またはパラメータ無効
+          description: 31日超、from が180日より前、またはパラメータ無効
           content:
             application/json:
               schema:
@@ -1040,8 +996,7 @@ paths:
       tags:
       - レポート（Reports）
       summary: 通話明細レポート取得
-      description: スタッフ別・プロジェクト別の通話明細を取得します。スコープ `reports:read` とライセンス `open_api_advanced`
-        が必要です。
+      description: スタッフ別・プロジェクト別の通話明細を取得します。スコープ `reports:read` とライセンス `open_api_advanced` が必要です。
       operationId: reportsCalls
       parameters:
       - name: from
@@ -1074,7 +1029,7 @@ paths:
           type: integer
       - name: group_by
         in: query
-        description: 集計単位
+        description: 集計単位。`staff` は staff_id/staff_name、`project` は project_id/project_name、`day`/`week` は period_start/period_end を返します。
         required: false
         schema:
           type: string
@@ -1083,6 +1038,7 @@ paths:
           - staff
           - project
           - day
+          - week
       - name: page
         in: query
         required: false
@@ -1141,8 +1097,7 @@ paths:
       tags:
       - レポート（Reports）
       summary: ユーザー別レポート取得
-      description: スタッフ別の通話パフォーマンスレポートを取得します。スコープ `reports:read` とライセンス `open_api_advanced`
-        が必要です。
+      description: スタッフ別の通話パフォーマンスレポートを取得します。スコープ `reports:read` とライセンス `open_api_advanced` が必要です。
       operationId: reportsUsers
       parameters:
       - name: from
@@ -1167,6 +1122,29 @@ paths:
         required: false
         schema:
           type: integer
+      - name: sort
+        in: query
+        description: 並び替えキー
+        required: false
+        schema:
+          type: string
+          default: total_out_calls
+          enum:
+          - total_out_calls
+          - total_in_calls
+          - total_out_connected
+          - connection_rate
+          - total_duration_seconds
+      - name: order
+        in: query
+        description: 並び順
+        required: false
+        schema:
+          type: string
+          default: desc
+          enum:
+          - asc
+          - desc
       - name: page
         in: query
         required: false
@@ -1179,7 +1157,7 @@ paths:
         schema:
           type: integer
           default: 50
-          maximum: 200
+          maximum: 100
       responses:
         '200':
           description: ユーザー別レポート
@@ -1195,24 +1173,48 @@ paths:
                           type: integer
                           example: 123
                         staff_name:
+                          description: 削除済みスタッフの場合は null
                           type: string
                           example: 田中太郎
+                          nullable: true
+                        total_out_calls:
+                          type: integer
+                          example: 70
+                        total_out_connected:
+                          type: integer
+                          example: 26
+                        total_in_calls:
+                          type: integer
+                          example: 15
+                        total_in_connected:
+                          type: integer
+                          example: 6
                         total_calls:
+                          description: total_out_calls + total_in_calls
                           type: integer
                           example: 85
                         connected_calls:
+                          description: total_out_connected + total_in_connected
                           type: integer
                           example: 32
                         connection_rate:
+                          description: 発信接続率（%）= total_out_connected / total_out_calls
                           type: number
                           format: float
-                          example: 37.6
+                          example: 37.14
                         total_duration_seconds:
                           type: integer
                           example: 12600
                         avg_duration_seconds:
+                          description: total_duration_seconds ÷ total_calls（四捨五入）
                           type: integer
                           example: 148
+                        total_mybox:
+                          type: integer
+                          example: 9
+                        total_appoints:
+                          type: integer
+                          example: 4
                       type: object
                   pagination:
                     $ref: '#/components/schemas/PaginationMeta'
@@ -1277,6 +1279,24 @@ paths:
                           type: array
                           items:
                             type: string
+                        filters:
+                          properties:
+                            call_status:
+                              type: array
+                              items:
+                                type: string
+                              example:
+                              - missed_call
+                              - no_answer
+                            project_ids:
+                              type: array
+                              items:
+                                type: integer
+                              example:
+                              - 456
+                              - 789
+                          type: object
+                          nullable: true
                         is_active:
                           type: boolean
                         last_delivered_at:
@@ -1284,6 +1304,7 @@ paths:
                           format: date-time
                           nullable: true
                         consecutive_failures:
+                          description: 連続した配信試行の失敗回数（再送を含む）。配信が成功すると 0 にリセットされ、10 に達するとWebhookは自動的に無効化されます。
                           type: integer
                           example: 0
                         created_at:
@@ -1318,8 +1339,7 @@ paths:
       tags:
       - Webhook
       summary: Webhook登録
-      description: Comdeckイベントを受信するエンドポイントURLを登録します。ペイロードは `X-Comdesk-Signature` ヘッダーにHMAC-SHA256署名付きで送信されます。スコープ
-        `webhooks:manage` とライセンス `open_api_advanced` が必要です。
+      description: 'Comdeskイベントを受信するエンドポイントURLを登録します。ペイロードは `X-Comdesk-Signature: sha256=<hex>` ヘッダーにHMAC-SHA256署名付きで送信されます。実際にPOSTされる本文の定義は **WebhookPayload** スキーマ(本ページ下部のSchemas)を参照してください。スコープ `webhooks:manage` とライセンス `open_api_advanced` が必要です。'
       operationId: webhooksCreate
       requestBody:
         required: true
@@ -1331,25 +1351,31 @@ paths:
               - events
               properties:
                 url:
+                  description: Webhook送信先URL。https必須 — http:// のURLは拒否されます(400)。またパブリックなアドレスに解決される必要があります(SSRF対策)。
                   type: string
                   format: uri
                   example: https://hooks.example.com/comdesk
                 events:
+                  description: 購読するイベント種別。call.started=発信/着信開始、call.completed=通話終了(応答あり)、call.missed=不在(応答なし)、call.voicemail=留守録の録音終了、customer.created / customer.updated=顧客の登録・更新、transcription.completed=文字起こし完了、summary.completed=要約完了。call.failed と ivr.trigger は登録できますが、現時点で配信元がありません(予約値)。
                   type: array
                   items:
                     type: string
                     enum:
+                    - call.started
                     - call.completed
                     - call.missed
-                    - call.started
+                    - call.voicemail
+                    - call.failed
                     - customer.created
                     - customer.updated
                     - transcription.completed
                     - summary.completed
+                    - ivr.trigger
                   example:
                   - call.completed
                   - call.missed
                 filters:
+                  description: 登録のみ — filtersは形式チェック・保存はされますが、配信時にはまだ適用されません（購読中の全イベントが配信されます）。フィルタ値（call_status / project_ids）の実在チェックも未実装です。配信時フィルタリングは別チケットで対応。
                   properties:
                     call_status:
                       type: array
@@ -1370,9 +1396,10 @@ paths:
                 is_enabled:
                   type: boolean
                   example: true
-                label:
+                name:
                   type: string
                   example: Slack通知 — 不在着信
+                  nullable: true
               type: object
       responses:
         '201':
@@ -1405,6 +1432,24 @@ paths:
                         type: array
                         items:
                           type: string
+                      filters:
+                        properties:
+                          call_status:
+                            type: array
+                            items:
+                              type: string
+                            example:
+                            - missed_call
+                            - no_answer
+                          project_ids:
+                            type: array
+                            items:
+                              type: integer
+                            example:
+                            - 456
+                            - 789
+                        type: object
+                        nullable: true
                       is_active:
                         type: boolean
                       created_at:
@@ -1443,9 +1488,9 @@ paths:
       - BearerAuth: []
       x-acceptance-criteria:
       - ✅ 特定イベント（call.completed、call.missedなど）を受信するURLエンドポイントを登録できること
-      - ✅ call_statusとproject_idsでイベントをフィルタできること
+      - ⚠️ call_status / project_ids フィルタを登録できること — 登録のみ。配信時のフィルタ適用は未対応（フィルタに関わらず購読中の全イベントが配信されます）。配信時フィルタリングは別チケットで管理。
       - ✅ ペイロードがX-Comdesk-SignatureヘッダーにHMAC-SHA256署名付きで配信されること
-      - ✅ リプレイ保護のためevent_id（UUID v4）とtimestamp（Unixエポック）がペイロードに含まれること
+      - '✅ リプレイ保護のためevent_id（UUID v4）とtimestamp（ISO8601形式、例: 2026-07-15T18:47:14+09:00）がペイロードに含まれること'
       - 🔒 スコープ webhooks:manage が必要
       - 🔒 ライセンス open_api_advanced が必要
   /api/v1/webhooks/{webhookId}:
@@ -1488,6 +1533,24 @@ paths:
                         type: array
                         items:
                           type: string
+                      filters:
+                        properties:
+                          call_status:
+                            type: array
+                            items:
+                              type: string
+                            example:
+                            - missed_call
+                            - no_answer
+                          project_ids:
+                            type: array
+                            items:
+                              type: integer
+                            example:
+                            - 456
+                            - 789
+                        type: object
+                        nullable: true
                       is_active:
                         type: boolean
                       last_delivered_at:
@@ -1495,6 +1558,7 @@ paths:
                         format: date-time
                         nullable: true
                       consecutive_failures:
+                        description: 連続した配信試行の失敗回数（再送を含む）。配信が成功すると 0 にリセットされ、10 に達するとWebhookは自動的に無効化されます。
                         type: integer
                         example: 0
                       created_at:
@@ -1555,6 +1619,7 @@ paths:
                   type: string
                   nullable: true
                 url:
+                  description: Webhook送信先URL。https必須 — http:// のURLは拒否されます(400)。またパブリックなアドレスに解決される必要があります(SSRF対策)。
                   type: string
                   format: uri
                   nullable: true
@@ -1562,6 +1627,36 @@ paths:
                   type: array
                   items:
                     type: string
+                    enum:
+                    - call.started
+                    - call.completed
+                    - call.missed
+                    - call.voicemail
+                    - call.failed
+                    - customer.created
+                    - customer.updated
+                    - transcription.completed
+                    - summary.completed
+                    - ivr.trigger
+                  nullable: true
+                filters:
+                  description: 登録のみ — filtersは形式チェック・保存はされますが、配信時にはまだ適用されません（購読中の全イベントが配信されます）。フィルタ値（call_status / project_ids）の実在チェックも未実装です。配信時フィルタリングは別チケットで対応。
+                  properties:
+                    call_status:
+                      type: array
+                      items:
+                        type: string
+                      example:
+                      - missed_call
+                      - no_answer
+                    project_ids:
+                      type: array
+                      items:
+                        type: integer
+                      example:
+                      - 456
+                      - 789
+                  type: object
                   nullable: true
                 is_active:
                   type: boolean
@@ -1592,6 +1687,24 @@ paths:
                         type: array
                         items:
                           type: string
+                      filters:
+                        properties:
+                          call_status:
+                            type: array
+                            items:
+                              type: string
+                            example:
+                            - missed_call
+                            - no_answer
+                          project_ids:
+                            type: array
+                            items:
+                              type: integer
+                            example:
+                            - 456
+                            - 789
+                        type: object
+                        nullable: true
                       is_active:
                         type: boolean
                       last_delivered_at:
@@ -1599,6 +1712,7 @@ paths:
                         format: date-time
                         nullable: true
                       consecutive_failures:
+                        description: 連続した配信試行の失敗回数（再送を含む）。配信が成功すると 0 にリセットされ、10 に達するとWebhookは自動的に無効化されます。
                         type: integer
                         example: 0
                       created_at:
@@ -1761,7 +1875,7 @@ components:
               example: invalid_api_key
             message:
               type: string
-              example: 指定されたAPIキーは無効または失効しています。
+              example: Missing or invalid API key.
             details:
               example: null
               nullable: true
@@ -1776,12 +1890,12 @@ components:
               example: validation_error
             message:
               type: string
-              example: 入力データが無効です。
+              example: Validation failed.
             details:
               type: object
               example:
                 phone_number:
-                - 電話番号は必須です。
+                - The phone number field is required.
           type: object
       type: object
     PaginationMeta:
@@ -1824,11 +1938,6 @@ components:
           description: 発話の重なり回数
           type: integer
           example: 2
-        positive_ratio:
-          description: ポジティブ感情の比率
-          type: number
-          format: float
-          example: 0.72
         question_count:
           description: 質問の数
           type: integer
@@ -1842,14 +1951,25 @@ components:
     CallHistoryItem:
       properties:
         call_id:
-          type: string
-          example: call_abc123
+          description: 通話履歴ID。GET /api/v1/calls/{callId} のパスパラメータに指定する整数値と同一です。
+          type: integer
+          format: int64
+          example: 150193036
         call_type:
+          description: 通話種別。voicemail は自社の留守番電話に録音された着信に加え、相手方の留守番電話に応答された発信も含みます。
           type: string
           example: outbound
           enum:
           - outbound
           - inbound
+          - outbound_no_answer
+          - inbound_no_answer
+          - internal
+          - voicemail
+          - transfer
+          - sms_inbound
+          - sms_outbound
+          - ivr_outbound
         status:
           type: string
           example: connected
@@ -1919,6 +2039,272 @@ components:
           example: SF-LEAD-001
           nullable: true
       type: object
+    WebhookPayload:
+      description: "Comdeskが登録済みWebhook URLへPOSTするリクエストボディ。\n *\n * **配信方法**\n * - `POST <登録したURL>` / `Content-Type: application/json`。配信先は `https://` のみです。\n * - `X-Comdesk-Signature: sha256=<hex>` — Webhook作成時に一度だけ表示されるシークレットを鍵とした、**リクエストボディの生バイト列**に対するHMAC-SHA256。\n * - `X-Comdesk-Event: <イベント名>` — `event` プロパティと同じ値。\n * - `X-Comdesk-Delivery: <event_id>` — `event_id` プロパティと同じ値(`webhook.test` では送信されません)。\n * - `User-Agent: Comdesk-Webhook/1.0`(`webhook.test` は `Comdesk-Webhook-Tester/1.0`)。\n *\n * **署名検証** — 受信した生ボディそのものに対してHMACを計算してください。パースしたJSONを再シリアライズするとバイト列が変わり、検証に失敗します。\n *\n * **配信仕様** — 最大6回試行、バックオフ 1分 → 5分 → 30分 → 2時間 → 24時間。4xx/5xx とタイムアウト(10秒)は再送対象です。再送時も `event_id` は同一のため、受信側は `event_id` による冪等処理を実装してください。\n *\n * **自動無効化** — **連続10回の試行失敗**でWebhookは `is_active: false` となり、`PUT /api/v1/webhooks/{webhookId}` で再有効化するまでイベントを受信しません。カウンタは `consecutive_failures` で、失敗した**試行ごと**に加算されます（再送も含む。イベント単位ではありません）。配信が1回でも成功すると 0 にリセットされます。しきい値は最大試行回数（6回）より大きいため、到達不能なイベント1件だけでWebhookが無効化されることはありません（再送を使い切るイベントが連続で約2件必要です）。\n\
+        \ *\n * **`data` の形** は `event` によって決まります。下記のイベント別スキーマを参照してください。"
+      required:
+      - event_id
+      - timestamp
+      - event
+      - data
+      properties:
+        event_id:
+          description: UUID v4。同一イベントの再送では値が変わらないため、リプレイ/重複排除のキーとして使用できます。
+          type: string
+          format: uuid
+          example: 9b7a1f2c-3d4e-4f50-9a61-2b3c4d5e6f70
+        timestamp:
+          description: オフセット付きISO8601、Comdeskのアプリタイムゾーン(Asia/Tokyo, +09:00)。dispatch時点で確定し、再送しても変わりません。
+          type: string
+          format: date-time
+          example: '2026-07-15T18:47:14+09:00'
+        event:
+          description: '`webhook.test` は `POST /api/v1/webhooks/{webhookId}/test` のみが発火するイベントで、購読対象にはできません。`call.failed` と `ivr.trigger` は購読登録できますが、現時点で配信元がありません(予約値)。'
+          type: string
+          example: call.completed
+          enum:
+          - call.started
+          - call.completed
+          - call.missed
+          - call.voicemail
+          - call.failed
+          - customer.created
+          - customer.updated
+          - transcription.completed
+          - summary.completed
+          - ivr.trigger
+          - webhook.test
+        data:
+          description: イベント別の本文。どのスキーマを使うかは形ではなく `event` で判断してください(`oneOf` ではなく `anyOf` にしてあります。WebhookCallStartedData は WebhookCallEndedData の部分集合のため、通話終了のペイロードは両方に一致するのが正常です)。call.started → WebhookCallStartedData / call.completed・call.missed・call.voicemail → WebhookCallEndedData / customer.created → WebhookCustomerCreatedData / customer.updated → WebhookCustomerUpdatedData / transcription.completed → WebhookTranscriptionCompletedData / summary.completed → WebhookSummaryCompletedData / ivr.trigger → WebhookIvrTriggerData / call.failed → WebhookCallFailedData / webhook.test → WebhookTestData。
+          anyOf:
+          - $ref: '#/components/schemas/WebhookCallStartedData'
+          - $ref: '#/components/schemas/WebhookCallEndedData'
+          - $ref: '#/components/schemas/WebhookCustomerCreatedData'
+          - $ref: '#/components/schemas/WebhookCustomerUpdatedData'
+          - $ref: '#/components/schemas/WebhookTranscriptionCompletedData'
+          - $ref: '#/components/schemas/WebhookSummaryCompletedData'
+          - $ref: '#/components/schemas/WebhookIvrTriggerData'
+          - $ref: '#/components/schemas/WebhookCallFailedData'
+          - $ref: '#/components/schemas/WebhookTestData'
+      type: object
+    WebhookCallStartedData:
+      description: 通話履歴が作成された(発信開始)ときに送信されます。CRMの通話作成経路が配信元です。
+      required:
+      - call_id
+      properties:
+        call_id:
+          description: 通話履歴ID（整数）。
+          type: integer
+          format: int64
+          example: 1234567
+        phone_number:
+          type: string
+          example: 09012345678
+          nullable: true
+        staff_id:
+          type: integer
+          example: 123
+          nullable: true
+        project_id:
+          type: integer
+          example: 456
+          nullable: true
+        started_at:
+          type: string
+          format: date-time
+          example: '2026-07-15T18:42:01+09:00'
+          nullable: true
+      type: object
+    WebhookCallEndedData:
+      description: PBXから通話終了が通知されたときに送信されます。`call.completed`=応答あり、`call.missed`=応答なし、`call.voicemail`=留守番電話の録音で終了。
+      required:
+      - call_id
+      properties:
+        call_id:
+          type: integer
+          format: int64
+          example: 1234567
+        phone_number:
+          type: string
+          example: 09012345678
+          nullable: true
+        staff_id:
+          type: integer
+          example: 123
+          nullable: true
+        project_id:
+          type: integer
+          example: 456
+          nullable: true
+        started_at:
+          type: string
+          format: date-time
+          example: '2026-07-15T18:42:01+09:00'
+          nullable: true
+        duration_seconds:
+          description: 通話時間(秒)。接続しなかった場合は `null`。
+          type: integer
+          example: 330
+          nullable: true
+      type: object
+    WebhookCustomerCreatedData:
+      description: '`POST /api/v1/customers` で新規作成された場合に送信されます。'
+      required:
+      - customer_id
+      properties:
+        customer_id:
+          type: integer
+          format: int64
+          example: 78901
+        name:
+          type: string
+          example: テスト株式会社
+          nullable: true
+        tel1:
+          type: string
+          example: 0312345678
+          nullable: true
+        project_id:
+          type: integer
+          example: 456
+          nullable: true
+        external_id:
+          type: string
+          example: SF-LEAD-001
+          nullable: true
+      type: object
+    WebhookCustomerUpdatedData:
+      description: '`PATCH /api/v1/customers/{customerId}` で既存レコードが更新された場合に送信されます。'
+      required:
+      - customer_id
+      properties:
+        customer_id:
+          type: integer
+          format: int64
+          example: 78901
+        changed_fields:
+          description: 更新リクエストで送信されたフィールド名の一覧。
+          type: array
+          items:
+            type: string
+          example:
+          - name
+          - tel1
+        external_id:
+          type: string
+          example: SF-LEAD-001
+          nullable: true
+      type: object
+    WebhookTranscriptionCompletedData:
+      required:
+      - call_id
+      - transcription
+      properties:
+        call_id:
+          type: integer
+          format: int64
+          example: 1234567
+        transcription:
+          description: 文字起こし結果。先頭5000文字で切り詰められます。全文は `GET /api/v1/calls/{callId}` を参照してください。
+          type: string
+          example: お世話になります、コムデスクの田中と申します…
+          maxLength: 5000
+      type: object
+    WebhookSummaryCompletedData:
+      required:
+      - call_id
+      - summary
+      properties:
+        call_id:
+          type: integer
+          format: int64
+          example: 1234567
+        summary:
+          description: AI要約。先頭5000文字で切り詰められます。
+          type: string
+          example: 見積もりの依頼があり、来週の折り返しを希望。
+          maxLength: 5000
+      type: object
+    WebhookIvrTriggerData:
+      description: IVRセッションを受理・キュー投入したときに送信されます。現時点で配信元がないため配信されません(予約値)。
+      required:
+      - session_id
+      - call_id
+      - phone_number
+      - project_id
+      - initiated_at
+      properties:
+        session_id:
+          description: '`ivr_` + call_id。'
+          type: string
+          example: ivr_1234567
+        call_id:
+          type: integer
+          format: int64
+          example: 1234567
+        phone_number:
+          type: string
+          example: 09012345678
+        project_id:
+          type: integer
+          example: 456
+        queue_id:
+          type: integer
+          example: 12
+          nullable: true
+        external_id:
+          type: string
+          example: SF-LEAD-001
+          nullable: true
+        initiated_at:
+          type: string
+          format: date-time
+          example: '2026-07-15T18:42:01+09:00'
+      type: object
+    WebhookCallFailedData:
+      description: 発信の受け付けは成功したものの、PBXで実際に架電されなかったときに送信されます。現時点で配信元がないため配信されません(予約値)。
+      required:
+      - call_id
+      - reason
+      - failed_at
+      properties:
+        call_id:
+          type: integer
+          format: int64
+          example: 1234567
+        customer_id:
+          type: integer
+          format: int64
+          example: 78901
+          nullable: true
+        reason:
+          description: staff_not_dialable=該当スタッフに架電可能なPBXユーザーがない / pbx_unconfigured=当該環境に架電先が未設定 / pbx_host_unknown=スタッフのPBXホストを解決できない / pbx_rejected=PBXが発信を拒否 / pbx_unreachable=リトライ後もPBXに到達できない。
+          type: string
+          example: pbx_rejected
+          enum:
+          - staff_not_dialable
+          - pbx_unconfigured
+          - pbx_host_unknown
+          - pbx_rejected
+          - pbx_unreachable
+        failed_at:
+          type: string
+          format: date-time
+          example: '2026-07-15T18:42:09+09:00'
+      type: object
+    WebhookTestData:
+      description: '`POST /api/v1/webhooks/{webhookId}/test` のみが発火します。購読対象にはできず、再送も行われません。'
+      required:
+      - webhook_id
+      - message
+      properties:
+        webhook_id:
+          type: integer
+          example: 1
+        message:
+          type: string
+          example: This is a test event from Comdesk.
+      type: object
   securitySchemes:
     BearerAuth:
       type: http
@@ -1929,8 +2315,6 @@ tags:
   description: 通話（Calls）
 - name: 顧客（Customers）
   description: 顧客（Customers）
-- name: IVR
-  description: IVR
 - name: レポート（Reports）
   description: レポート（Reports）
 - name: Webhook
