@@ -21,7 +21,7 @@ API キーが必要です。キーは開発者ではなく、**テナント管�
     すべてのリクエストでキーを Bearer トークンとして送信します：
 
     ```text
-    Authorization: Bearer cdsk_test_xxxxxxxxxxxxxxxxxxxx
+    Authorization: Bearer cdsk_xxxxxxxxxxxxxxxxxxxx
     ```
   </Step>
   <Step title="発信する">
@@ -30,8 +30,8 @@ API キーが必要です。キーは開発者ではなく、**テナント管�
     <CodeGroup>
 
     ```bash cURL
-    curl -X POST https://app.comdesk.com/api/v1/calls/initiate \
-      -H "Authorization: Bearer cdsk_test_xxxxxxxxxxxxxxxxxxxx" \
+    curl -X POST https://xxxx.comdesk.com/api/v1/calls/initiate \
+      -H "Authorization: Bearer cdsk_xxxxxxxxxxxxxxxxxxxx" \
       -H "Content-Type: application/json" \
       -d '{
         "phone_number": "+819012345678",
