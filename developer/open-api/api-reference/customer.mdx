@@ -3,12 +3,13 @@ title: "顧客"
 description: "顧客の登録・一括インポート・一覧・取得・更新を行い、external_id で相互参照します。"
 ---
 
-ベース URL：`https://app.comdesk.com/api/v1`
+ベース URL：`https://xxxx.comdesk.com/api/v1`
 
 | メソッド | パス | スコープ |
 | --- | --- | --- |
 | `POST` | `/customers` | `customers:write` |
 | `POST` | `/customers/bulk` | `customers:write` |
+| `GET` | `/customers/bulk/{batchId}` | `customers:write` |
 | `GET` | `/customers` | `customers:read` |
 | `GET` | `/customers/{customerId}` | `customers:read` |
 | `PUT` | `/customers/{customerId}` | `customers:write` |
@@ -17,9 +18,59 @@ description: "顧客の登録・一括インポート・一覧・取得・更新
 
 ## 顧客オブジェクト
 
-<Warning>
-  レスポンスのフリガナフィールドは PRD では `name_kana` と記載されていますが、Postman テストでは `kana` を参照しています。利用前に稼働中の API で正確なキー名を確認してください。
-</Warning>
+<ResponseField name="customer_id" type="integer">
+  Comdesk が割り当てる ID。
+</ResponseField>
+
+<ResponseField name="external_id" type="string">
+  自社システムの ID。プロジェクト内で一意。未設定の場合は `null`。
+</ResponseField>
+
+<ResponseField name="name" type="string">
+</ResponseField>
+
+<ResponseField name="name_kana" type="string">
+  フリガナ（カナ読み）。
+</ResponseField>
+
+<ResponseField name="tel1" type="string">
+</ResponseField>
+
+<ResponseField name="tel2" type="string">
+</ResponseField>
+
+<ResponseField name="prefecture" type="string">
+</ResponseField>
+
+<ResponseField name="address1" type="string">
+</ResponseField>
+
+<ResponseField name="industry" type="string">
+</ResponseField>
+
+<ResponseField name="employee_scale" type="string">
+</ResponseField>
+
+<ResponseField name="custom_fields" type="object">
+  プロパティ名をキーとするカスタムプロパティの値。
+</ResponseField>
+
+<ResponseField name="project_id" type="integer">
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  オフセット付き ISO 8601。
+</ResponseField>
+
+<ResponseField name="updated_at" type="string">
+  オフセット付き ISO 8601。
+</ResponseField>
+
+### フィールドのルール
+
+- **`tel1` / `tel2`** — 最大 30 文字。E.164 形式（`+819012345678`）、または `0` で始まる国内番号（`0312345678`、10〜11 桁）のいずれか。区切りとしてハイフンまたはスペースを使用できます。それ以外は `422` を返します。
+- **`custom_fields`** — 最大 100 件。各値は最大 255 文字の文字列。各キーは、テナントに既に存在する顧客プロパティの**名前または数値 ID** と完全に一致（大文字小文字を区別）する必要があります。未知のキーがあると `422` を返し、何も保存されません。
+- **`project_id`** — 自テナント内のプロジェクトである必要があります。それ以外は `422`。
 
 ---
 
@@ -29,17 +80,63 @@ description: "顧客の登録・一括インポート・一覧・取得・更新
 
 ### ボディ
 
+<ParamField body="project_id" type="integer" required>
+  顧客が属するプロジェクト。
+</ParamField>
+
+<ParamField body="name" type="string" required>
+  顧客名、最大 255 文字。
+</ParamField>
+
+<ParamField body="external_id" type="string">
+  自社レコード ID、最大 255。プロジェクト内で一意 — 重複時は `409 duplicate_external_id` を返します。
+</ParamField>
+
+<ParamField body="name_kana" type="string">
+  最大 255 文字。
+</ParamField>
+
+<ParamField body="tel1" type="string">
+  上記「フィールドのルール」を参照。
+</ParamField>
+
+<ParamField body="tel2" type="string">
+  上記「フィールドのルール」を参照。
+</ParamField>
+
+<ParamField body="prefecture" type="string">
+  最大 255 文字。
+</ParamField>
+
+<ParamField body="address1" type="string">
+  最大 255 文字。
+</ParamField>
+
+<ParamField body="industry" type="string">
+  最大 255 文字。
+</ParamField>
+
+<ParamField body="employee_scale" type="string">
+  最大 255 文字。
+</ParamField>
+
+<ParamField body="custom_fields" type="object">
+  上記「フィールドのルール」を参照。
+</ParamField>
+
+登録に成功すると、`customer.created` Webhook イベントも発生します。
+
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://app.comdesk.com/api/v1/customers \
-  -H "Authorization: Bearer cdsk_live_xxx" \
+curl -X POST https://xxxx.comdesk.com/api/v1/customers \
+  -H "Authorization: Bearer $COMDESK_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "project_id": 456,
     "external_id": "SF-LEAD-00100",
-    "name": "株式会社マジュ・ブルサマ",
-    "tel1": "+81337778888"
+    "name": "Test Corp",
+    "tel1": "0337778888"
   }'
 ```
 
@@ -52,11 +149,9 @@ curl -X POST https://app.comdesk.com/api/v1/customers \
   "data": {
     "customer_id": 90123,
     "external_id": "SF-LEAD-00100",
-    "name": "株式会社マジュ・ブルサマ",
-    "tel1": "+81337778888",
+    "name": "Test Corp",
     "project_id": 456,
-    "created_at": "2026-06-02T08:30:00Z",
-    "updated_at": "2026-06-02T08:30:00Z"
+    "created_at": "2026-06-02T17:30:00+09:00"
   }
 }
 ```
@@ -69,29 +164,119 @@ curl -X POST https://app.comdesk.com/api/v1/customers \
 
 `POST /customers/bulk`
 
-1 リクエストで **1〜500 件**の顧客を登録します。
+**1〜500 件**の顧客を登録キューに入れ、`202 Accepted` と `batch_id` を即座に返します。レスポンスが届いた時点ではレコードはまだ作成されて**いません** — 結果は下記「一括登録ステータスの取得」（`GET /customers/bulk/{batchId}`）をポーリングして確認してください。
 
 ### ボディ
 
 <ParamField body="customers" type="array" required>
-  顧客オブジェクトの配列。各要素は単一登録のボディと同じフィールドを使用。最大 500 件。
+  1〜500 件の顧客オブジェクトの配列。各要素は単一登録のボディと同じフィールドとルールを使用します。いずれかのレコードがスキーマバリデーションに失敗した場合（例：`tel1` の形式が不正）、リクエスト全体が `422` で拒否され、何もキューに入りません。
 </ParamField>
 
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://app.comdesk.com/api/v1/customers/bulk \
-  -H "Authorization: Bearer cdsk_live_xxx" \
+curl -X POST https://xxxx.comdesk.com/api/v1/customers/bulk \
+  -H "Authorization: Bearer $COMDESK_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "customers": [
-      { "project_id": 456, "external_id": "SF-LEAD-00100", "name": "株式会社マジュ・ブルサマ", "tel1": "+81337778888" },
-      { "project_id": 456, "external_id": "SF-LEAD-00101", "name": "ブディ・サントソ", "tel1": "+819012345678" }
+      { "project_id": 456, "external_id": "SF-LEAD-00100", "name": "Test Corp", "tel1": "0337778888" },
+      { "project_id": 456, "external_id": "SF-LEAD-00101", "name": "Tanaka Taro", "tel1": "+819012345678" }
     ]
   }'
 ```
 
 </CodeGroup>
+
+<ResponseExample>
+
+```json 202
+{
+  "data": {
+    "batch_id": "b3f1c2a0-9d7e-4c11-88a2-1f0b5c6de9d4",
+    "status": "pending",
+    "total": 2
+  }
+}
+```
+
+</ResponseExample>
+
+---
+
+## 一括登録ステータスの取得
+
+`GET /customers/bulk/{batchId}`
+
+バッチの進捗とレコードごとの結果を返します。数秒ごとにポーリングしてください。1 レコードあたり約 80 ms が目安です。未知のバッチ、または他テナントに属するバッチの場合は `404` を返します。
+
+<ResponseField name="batch_id" type="string">
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  `pending`（キュー投入済み）→ `processing` → `completed` または `failed`。`pending` のまま長時間経過したバッチは `failure_reason` 付きで `failed` として報告されるため、ポーリングは必ず終了状態に到達します。
+</ResponseField>
+
+<ResponseField name="total" type="integer">
+  送信したレコード数。
+</ResponseField>
+
+<ResponseField name="succeeded" type="integer">
+</ResponseField>
+
+<ResponseField name="failed" type="integer">
+</ResponseField>
+
+<ResponseField name="results" type="array">
+  作成されたレコードごとに 1 エントリ：`index`（送信した配列内の位置）、`status`（`created`）、`customer_id`、`external_id`。バッチが完了するまでは空です。
+</ResponseField>
+
+<ResponseField name="errors" type="array">
+  失敗したレコードごとに 1 エントリ：`index`、`code`（例：`duplicate_external_id`、`validation_error`）、`message`。バッチが完了するまでは空です。
+</ResponseField>
+
+<ResponseField name="failure_reason" type="string">
+  バッチ全体が失敗した理由。`status` が `failed` の場合のみ設定されます。
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+</ResponseField>
+
+<ResponseField name="started_at" type="string">
+  処理が開始されるまでは `null`。
+</ResponseField>
+
+<ResponseField name="completed_at" type="string">
+  バッチが終了するまでは `null`。
+</ResponseField>
+
+<ResponseExample>
+
+```json 200
+{
+  "data": {
+    "batch_id": "b3f1c2a0-9d7e-4c11-88a2-1f0b5c6de9d4",
+    "status": "completed",
+    "total": 2,
+    "succeeded": 1,
+    "failed": 1,
+    "results": [
+      { "index": 0, "status": "created", "customer_id": 90123, "external_id": "SF-LEAD-00100" }
+    ],
+    "errors": [
+      { "index": 1, "code": "duplicate_external_id", "message": "Duplicate external_id within the same project." }
+    ],
+    "failure_reason": null,
+    "created_at": "2026-08-11T18:47:14+09:00",
+    "started_at": "2026-08-11T18:47:15+09:00",
+    "completed_at": "2026-08-11T18:47:16+09:00"
+  }
+}
+```
+
+</ResponseExample>
+
+作成された各レコードについても、`customer.created` Webhook イベントが発生します。
 
 ---
 
@@ -99,12 +284,65 @@ curl -X POST https://app.comdesk.com/api/v1/customers/bulk \
 
 `GET /customers`
 
+条件に一致した各顧客について、完全な顧客オブジェクト（上記「顧客オブジェクト」を参照）をページネーション付きで返します。
+
+<ParamField query="project_id" type="integer" required>
+  一覧を取得するプロジェクト。自テナント内のプロジェクトである必要があります。
+</ParamField>
+
+<ParamField query="external_id" type="string">
+  自社システムの ID の完全一致（0 件または 1 件を返します）。
+</ParamField>
+
+<ParamField query="search" type="string">
+  名前または電話番号の部分一致、最大 255 文字。
+</ParamField>
+
+<ParamField query="sort" type="string">
+  `name`、`created_at`、または `updated_at`。
+</ParamField>
+
+<ParamField query="order" type="string">
+  `asc` または `desc`。
+</ParamField>
+
+<ParamField query="page" default="1" type="integer">
+</ParamField>
+
+<ParamField query="per_page" default="50" type="integer">
+  最大 100。
+</ParamField>
+
+<CodeGroup>
+
+```bash cURL
+curl "https://xxxx.comdesk.com/api/v1/customers?project_id=456&external_id=SF-LEAD-00100" \
+  -H "Authorization: Bearer $COMDESK_API_KEY"
+```
+
+</CodeGroup>
+
 <ResponseExample>
 
 ```json 200
 {
   "data": [
-    { "customer_id": 90123, "external_id": "SF-LEAD-00100", "name": "株式会社マジュ・ブルサマ", "project_id": 456 }
+    {
+      "customer_id": 90123,
+      "external_id": "SF-LEAD-00100",
+      "name": "Test Corp",
+      "name_kana": null,
+      "tel1": "0337778888",
+      "tel2": null,
+      "prefecture": null,
+      "address1": null,
+      "industry": null,
+      "employee_scale": null,
+      "custom_fields": {},
+      "project_id": 456,
+      "created_at": "2026-06-02T17:30:00+09:00",
+      "updated_at": "2026-06-02T17:30:00+09:00"
+    }
   ],
   "pagination": { "current_page": 1, "per_page": 50, "total": 1, "last_page": 1 }
 }
@@ -118,7 +356,7 @@ curl -X POST https://app.comdesk.com/api/v1/customers/bulk \
 
 `GET /customers/{customerId}`
 
-完全な[顧客オブジェクト](#顧客オブジェクト)を返します。
+完全な顧客オブジェクト（上記「顧客オブジェクト」を参照）を返します。自テナント内に存在しない場合は `404 resource_not_found` を返します。
 
 ---
 
@@ -126,4 +364,21 @@ curl -X POST https://app.comdesk.com/api/v1/customers/bulk \
 
 `PUT /customers/{customerId}`
 
-部分更新 — 変更したいフィールドのみ送信します。登録と同じフィールドを受け付けます（作成時に固定される `project_id` を除く）。
+部分更新 — 変更したいフィールドのみ送信します。省略したフィールドはそのまま維持されます。null 許容のフィールドをクリアするには `null` を送信します。更新後の完全な顧客オブジェクト（上記「顧客オブジェクト」を参照）を返し、`customer.updated` Webhook イベントが発生します。
+
+受け付けるフィールド：`name`、`name_kana`、`tel1`、`tel2`、`prefecture`、`address1`、`industry`、`employee_scale`、`custom_fields`（登録と同じルール）、および `remarks`（自由記述、最大 65,535 文字）。
+
+<Warning>
+  `external_id` と `project_id` は作成時に固定されます。いずれか（または `id`、`customer_id`、`tenant_id`）を送信すると `422` を返します。
+</Warning>
+
+<CodeGroup>
+
+```bash cURL
+curl -X PUT https://xxxx.comdesk.com/api/v1/customers/90123 \
+  -H "Authorization: Bearer $COMDESK_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "tel2": "09012345678", "custom_fields": { "Rank": "A" } }'
+```
+
+</CodeGroup>
