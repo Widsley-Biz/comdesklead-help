@@ -5,7 +5,7 @@ description: "外部CRM（Salesforce、HubSpotなど）との統合のためのO
 ---
 
 <Info>
-  **バージョン:** 1.0.0 ・ **仕様:** OpenAPI 3.0 ・ **定義ファイル:** [docs.json](https://xxxx.comdesk.com/api/docs.json)
+  **バージョン:** 1.0.0 ・ **仕様:** OpenAPI 3.0 ・ **定義ファイル:** [docs.json](https://stg-custom2.comdesk.com/api/docs.json)
 </Info>
 
 ## 認証
@@ -15,7 +15,7 @@ description: "外部CRM（Salesforce、HubSpotなど）との統合のためのO
 APIキーはテナント管理画面から発行できます。
 
 ```bash
-curl https://xxxx.comdesk.com/api/v1/... \
+curl https://stg-custom2.comdesk.com/api/v1/... \
   -H "Authorization: Bearer <api_key>"
 ```
 
@@ -27,12 +27,12 @@ curl https://xxxx.comdesk.com/api/v1/... \
   現在のプランと当日の利用状況（APIリクエスト数・Webhook送信数）はテナント管理画面の「API使用状況」で、実際に適用されている1分あたりの上限は各レスポンスの `X-RateLimit-Limit` ヘッダーで確認してください。
 </Tip>
 
-| 種別 | デフォルト | 単位時間・リセット | 超過時 |
-| --- | --- | --- | --- |
-| 1分あたり | 300回 | 固定ウィンドウ。毎分00秒にリセット | 429 `rate_limit_exceeded` |
-| バースト | 100回 | 固定10秒ウィンドウ（00/10/20…秒）でリセット | 429 `rate_limit_exceeded` |
-| 1日あたり（APIリクエスト） | 100,000回 | 毎日0時（Asia/Tokyo）にリセット。成功（2xx/3xx）したリクエストのみカウント | 429 `quota_exceeded` |
-| 1日あたり（Webhook送信） | 無制限 | 毎日0時（Asia/Tokyo）にリセット | イベントが配信されない（[Webhookの1日あたり送信上限](#webhookの1日あたり送信上限)） |
+| 種別 | Free | Pro | Max | デフォルト | 単位時間・リセット | 超過時 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1分あたり | 60回 | 300回 | 1,000回 | 300回 | 固定ウィンドウ。毎分00秒にリセット | 429 `rate_limit_exceeded` |
+| バースト | 20回 | 100回 | 333回 | 100回 | 固定10秒ウィンドウ（00/10/20…秒）でリセット | 429 `rate_limit_exceeded` |
+| 1日あたり（APIリクエスト） | 1,000回 | 10,000回 | 100,000回 | 100,000回 | 毎日0時（Asia/Tokyo）にリセット。成功（2xx/3xx）したリクエストのみカウント | 429 `quota_exceeded` |
+| 1日あたり（Webhook送信） | —（Webhook利用不可） | 5,000回 | 50,000回 | 無制限 | 毎日0時（Asia/Tokyo）にリセット | イベントが配信されない（[Webhookの1日あたり送信上限](#webhookの1日あたり送信上限)） |
 
 「デフォルト」は、テナントにプランが設定されていない場合、またはプランの該当項目が未設定の場合に使われる値です。プランが設定されている場合は、そのプランの値が適用されます。1か月あたりの上限はありません。
 
@@ -66,49 +66,23 @@ Freeプランでは `/api/v1/reports/*` と `/api/v1/webhooks*` を利用でき�
 
 `Retry-After` ヘッダーと `error.details.retry_after` に、再試行までの秒数が入ります。この秒数待ってから再試行してください。`error.code` は次の2種類です。
 
-- `rate_limit_exceeded` — 1分あたり／バーストの上限超過
-- `quota_exceeded` — 1日あたりの上限超過
+`rate_limit_exceeded`（1分あたり／バーストの上限超過）
 
-<CodeGroup>
-
-```json rate_limit_exceeded
-{
-  "error": {
-    "code": "rate_limit_exceeded",
-    "message": "Rate limit exceeded. Please retry after 2 seconds.",
-    "details": {
-      "retry_after": 2
-    }
-  }
-}
+```json
+{ "error": { "code": "rate_limit_exceeded", "message": "Rate limit exceeded. Please retry after 2 seconds.", "details": { "retry_after": 2 } } }
 ```
 
-```json quota_exceeded
+`quota_exceeded`（1日あたりの上限超過）
+
+```json
+{ "error": { "code": "quota_exceeded", "message": "Daily quota exceeded. Limit: 1000, used: 1000.", "details": { "retry_after": 29876, "type": "daily", "quota": 1000, "used": 1000 } } }
 ```
 
-</CodeGroup>
-
-`quota_exceeded` の `details` には次の値が入ります。
-
-<ResponseField name="details.retry_after" type="integer">
-  翌日0時（Asia/Tokyo）までの秒数
-</ResponseField>
-
-<ResponseField name="details.type" type="string">
-  超過した上限の種類。常に `daily`
-</ResponseField>
-
-<ResponseField name="details.quota" type="integer">
-  1日あたりの上限回数（プランの値）
-</ResponseField>
-
-<ResponseField name="details.used" type="integer">
-  当日に成功したリクエスト数
-</ResponseField>
-
-<Note>
-  同じ値が `X-RateLimit-Type`／`X-Quota-Limit`／`X-Quota-Used` ヘッダーにも入ります。
-</Note>
+- `details.retry_after` — 翌日0時（Asia/Tokyo）までの秒数
+- `details.type` — 超過した上限の種類。常に `daily`
+- `details.quota` — 1日あたりの上限回数（プランの値）
+- `details.used` — 当日に成功したリクエスト数
+- 同じ値が `X-RateLimit-Type`／`X-Quota-Limit`／`X-Quota-Used` ヘッダーにも入ります
 
 ## 403のレスポンス
 
