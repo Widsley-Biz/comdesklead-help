@@ -23,6 +23,10 @@ API キーが必要です。キーは開発者ではなく、**テナント管�
     ```text
     Authorization: Bearer <API キー>
     ```
+
+    ```text
+    Authorization: Bearer <API キー>
+    ```
   </Step>
   <Step title="通話一覧を取得する">
     期間（`YYYY-MM-DD`、最大 31 日間、開始日は 180 日前以内）を指定して `GET /api/v1/calls` を呼び出します。
@@ -80,14 +84,57 @@ API キーが必要です。キーは開発者ではなく、**テナント管�
     }
     ```
 
+    上記の項目は一部を省略しています。すべてのフィールドは [通話](/developer/ja/api-reference/calls) を参照してください。一覧レスポンスでは電話番号がマスクされます — 完全なレコードは `GET /api/v1/calls/{callId}` で取得してください。レスポンスヘッダーの `X-Request-ID` に注目し、デバッグ用に保管してください（[エラー](/developer/ja/errors) を参照）。
+  </Step>
+  <Step title="レスポンスを読む">
+    成功すると、1 ページ分の通話とページネーション情報が返ります：
+
+    ```json
+    {
+      "data": [
+        {
+          "call_id": 150193036,
+          "call_type": "outbound",
+          "status": "connected",
+          "phone_number": "0901234****",
+          "staff_id": 123,
+          "staff_name": "Tanaka Taro",
+          "project_id": 456,
+          "started_at": "2026-09-10T10:00:00+09:00",
+          "duration_seconds": 330,
+          "external_id": null
+        }
+      ],
+      "pagination": { "current_page": 1, "per_page": 20, "total": 128, "last_page": 7 }
+    }
+    ```
+
     上記の項目は一部を省略しています。すべてのフィールドは [通話](/developer/open-api/api-reference/calls) を参照してください。一覧レスポンスでは電話番号がマスクされます — 完全なレコードは `GET /api/v1/calls/{callId}` で取得してください。レスポンスヘッダーの `X-Request-ID` に注目し、デバッグ用に保管してください（[エラー](/developer/open-api/file-3) を参照）。
   </Step>
   <Step title="Webhook でイベントを受け取る（任意）">
-    `open_api_advanced` ライセンスと `webhooks:manage` スコープを持つキーがあれば、`POST /api/v1/webhooks` で HTTPS エンドポイントを登録して `call.completed` などのイベントを発生と同時に受信できます。受信時には `X-Comdesk-Signature` を検証してください — [Webhook](/developer/open-api/webhook) を参照。
+    `open_api_advanced` ライセンスと `webhooks:manage` スコープを持つキーがあれば、`POST /api/v1/webhooks` で HTTPS エンドポイントを登録して `call.completed` などのイベントを発生と同時に受信できます。受信時には `X-Comdesk-Signature` を検証してください — [Webhook](/developer/ja/webhooks) を参照。 `open_api_advanced` ライセンスと `webhooks:manage` スコープを持つキーがあれば、`POST /api/v1/webhooks` で HTTPS エンドポイントを登録して `call.completed` などのイベントを発生と同時に受信できます。受信時には `X-Comdesk-Signature` を検証してください — [Webhook](/developer/open-api/webhook) を参照。
   </Step>
 </Steps>
 
 ## 次に読む
+
+<CardGroup cols={2}>
+  <Card title="認証" icon="key" href="/developer/ja/authentication">
+    スコープ、IP 許可リスト、キーのローテーションを詳しく解説。
+  </Card>
+
+  <Card title="通話 API" icon="phone" href="/developer/ja/api-reference/calls">
+    通話履歴の全パラメータとレスポンスフィールド。
+  </Card>
+
+  <Card title="Webhook" icon="bell" href="/developer/ja/webhooks">
+    イベントの購読とエンドポイントの保護。
+  </Card>
+
+  <Card title="エラー" icon="triangle-exclamation" href="/developer/ja/errors">
+    エラーエンベロープと各コードの処理方法。
+  </Card>
+</CardGroup>
 
 <CardGroup cols={2}>
   <Card title="認証" icon="key" href="/developer/open-api/authentication">
