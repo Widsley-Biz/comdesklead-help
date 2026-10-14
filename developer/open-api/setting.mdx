@@ -27,12 +27,66 @@ curl https://stg-custom2.comdesk.com/api/v1/... \
   現在のプランと当日の利用状況（APIリクエスト数・Webhook送信数）はテナント管理画面の「API使用状況」で、実際に適用されている1分あたりの上限は各レスポンスの `X-RateLimit-Limit` ヘッダーで確認してください。
 </Tip>
 
-| 種別 | Free | Pro | Max | デフォルト | 単位時間・リセット | 超過時 |
-| --- | --- | --- | --- | --- | --- | --- |
-| 1分あたり | 60回 | 300回 | 1,000回 | 300回 | 固定ウィンドウ。毎分00秒にリセット | 429 `rate_limit_exceeded` |
-| バースト | 20回 | 100回 | 333回 | 100回 | 固定10秒ウィンドウ（00/10/20…秒）でリセット | 429 `rate_limit_exceeded` |
-| 1日あたり（APIリクエスト） | 1,000回 | 10,000回 | 100,000回 | 100,000回 | 毎日0時（Asia/Tokyo）にリセット。成功（2xx/3xx）したリクエストのみカウント | 429 `quota_exceeded` |
-| 1日あたり（Webhook送信） | —（Webhook利用不可） | 5,000回 | 50,000回 | 無制限 | 毎日0時（Asia/Tokyo）にリセット | イベントが配信されない（[Webhookの1日あたり送信上限](#webhookの1日あたり送信上限)） |
+<table>
+  <colgroup>
+    <col width="230" />
+    <col width="129" />
+    <col width="100" />
+    <col width="100" />
+    <col width="104" />
+    <col width="325" />
+    <col width="217" />
+  </colgroup>
+  <thead>
+    <tr>
+      <th>種別</th>
+      <th>Free</th>
+      <th>Pro</th>
+      <th>Max</th>
+      <th>デフォルト</th>
+      <th>単位時間・リセット</th>
+      <th>超過時</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1分あたり</td>
+      <td>60回</td>
+      <td>300回</td>
+      <td>1,000回</td>
+      <td>300回</td>
+      <td>固定ウィンドウ。毎分00秒にリセット</td>
+      <td>429 `rate_limit_exceeded`</td>
+    </tr>
+    <tr>
+      <td>バースト</td>
+      <td>20回</td>
+      <td>100回</td>
+      <td>333回</td>
+      <td>100回</td>
+      <td>固定10秒ウィンドウ（00/10/20…秒）でリセット</td>
+      <td>429 `rate_limit_exceeded`</td>
+    </tr>
+    <tr>
+      <td>1日あたり（APIリクエスト）</td>
+      <td>1,000回</td>
+      <td>10,000回</td>
+      <td>100,000回</td>
+      <td>100,000回</td>
+      <td>毎日0時（Asia/Tokyo）にリセット。成功（2xx/3xx）したリクエストのみカウント</td>
+      <td>429 `quota_exceeded`</td>
+    </tr>
+    <tr>
+      <td>1日あたり（Webhook送信）</td>
+      <td>—（Webhook利用不可）</td>
+      <td>5,000回</td>
+      <td>50,000回</td>
+      <td>無制限</td>
+      <td>毎日0時（Asia/Tokyo）にリセット</td>
+      <td>イベントが配信されない（[Webhookの1日あたり送信上限](#webhookの1日あたり送信上限)）</td>
+    </tr>
+  </tbody>
+</table>
 
 「デフォルト」は、テナントにプランが設定されていない場合、またはプランの該当項目が未設定の場合に使われる値です。プランが設定されている場合は、そのプランの値が適用されます。1か月あたりの上限はありません。
 
