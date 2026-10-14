@@ -1,3 +1,197 @@
 ---
-title: "Setting"
+title: "Comdesk Lead Open API"
+sidebarTitle: "はじめに"
+description: "外部CRM（Salesforce、HubSpotなど）との統合のためのOpen APIです。"
 ---
+
+<Info>
+  **バージョン:** 1.0.0 ・ **仕様:** OpenAPI 3.0 ・ **定義ファイル:** [docs.json](https://stg-custom2.comdesk.com/api/docs.json)
+</Info>
+
+## 認証
+
+認証はAPIキーを使用し、`Authorization: Bearer <api_key>` ヘッダーで送信します。
+
+APIキーはテナント管理画面から発行できます。
+
+```bash
+curl https://stg-custom2.comdesk.com/api/v1/... \
+  -H "Authorization: Bearer <api_key>"
+```
+
+## レート制限・利用上限
+
+上限は**テナント単位**（同一テナントのAPIキーすべての合算）で適用されます。上限値は**テナントのプラン（Free／Pro／Max）ごと**にComdeskが設定しており、テナント個別には設定しません。
+
+<Tip>
+  現在のプランと当日の利用状況（APIリクエスト数・Webhook送信数）はテナント管理画面の「API使用状況」で、実際に適用されている1分あたりの上限は各レスポンスの `X-RateLimit-Limit` ヘッダーで確認してください。
+</Tip>
+
+| 種別 | デフォルト | 単位時間・リセット | 超過時 |
+| --- | --- | --- | --- |
+| 1分あたり | 300回 | 固定ウィンドウ。毎分00秒にリセット | 429 `rate_limit_exceeded` |
+| バースト | 100回 | 固定10秒ウィンドウ（00/10/20…秒）でリセット | 429 `rate_limit_exceeded` |
+| 1日あたり（APIリクエスト） | 100,000回 | 毎日0時（Asia/Tokyo）にリセット。成功（2xx/3xx）したリクエストのみカウント | 429 `quota_exceeded` |
+| 1日あたり（Webhook送信） | 無制限 | 毎日0時（Asia/Tokyo）にリセット | イベントが配信されない（[Webhookの1日あたり送信上限](#webhookの1日あたり送信上限)） |
+
+「デフォルト」は、テナントにプランが設定されていない場合、またはプランの該当項目が未設定の場合に使われる値です。プランが設定されている場合は、そのプランの値が適用されます。1か月あたりの上限はありません。
+
+### プランと利用できるエンドポイント
+
+Freeプランでは `/api/v1/reports/*` と `/api/v1/webhooks*` を利用できず、403 `license_required` が返ります（Pro／Maxで利用可能）。
+
+### 判定の順序
+
+<Warning>
+  1日あたりの上限（APIリクエスト）の判定は、スコープ・プランの判定より先に行われます。上限超過中は、Freeプランで利用できないエンドポイントやスコープ不足のAPIキーでも、403ではなく 429 `quota_exceeded` が返ります。
+</Warning>
+
+### レスポンスヘッダー
+
+`/api/v1/*` のすべてのレスポンスに付与されます。
+
+<ResponseField name="X-RateLimit-Limit" type="integer">
+  1分あたりの上限回数
+</ResponseField>
+
+<ResponseField name="X-RateLimit-Remaining" type="integer">
+  現在の1分ウィンドウでの残り回数
+</ResponseField>
+
+<ResponseField name="X-RateLimit-Reset" type="integer">
+  現在の1分ウィンドウがリセットされるUNIX時刻（秒）。常に次の毎分00秒
+</ResponseField>
+
+## 429のレスポンス
+
+`Retry-After` ヘッダーと `error.details.retry_after` に、再試行までの秒数が入ります。この秒数待ってから再試行してください。`error.code` は次の2種類です。
+
+- `rate_limit_exceeded` — 1分あたり／バーストの上限超過
+- `quota_exceeded` — 1日あたりの上限超過
+
+<CodeGroup>
+
+```json rate_limit_exceeded
+{
+  "error": {
+    "code": "rate_limit_exceeded",
+    "message": "Rate limit exceeded. Please retry after 2 seconds.",
+    "details": {
+      "retry_after": 2
+    }
+  }
+}
+```
+
+```json quota_exceeded
+{
+  "error": {
+    "code": "quota_exceeded",
+    "message": "Daily quota exceeded. Limit: 1000, used: 1000.",
+    "details": {
+      "retry_after": 29876,
+      "type": "daily",
+      "quota": 1000,
+      "used": 1000
+    }
+  }
+}
+```
+
+</CodeGroup>
+
+`quota_exceeded` の `details` には次の値が入ります。
+
+<ResponseField name="details.retry_after" type="integer">
+  翌日0時（Asia/Tokyo）までの秒数
+</ResponseField>
+
+<ResponseField name="details.type" type="string">
+  超過した上限の種類。常に `daily`
+</ResponseField>
+
+<ResponseField name="details.quota" type="integer">
+  1日あたりの上限回数（プランの値）
+</ResponseField>
+
+<ResponseField name="details.used" type="integer">
+  当日に成功したリクエスト数
+</ResponseField>
+
+<Note>
+  同じ値が `X-RateLimit-Type`／`X-Quota-Limit`／`X-Quota-Used` ヘッダーにも入ります。
+</Note>
+
+## 403のレスポンス
+
+`error.code` は次の2種類です。
+
+- `insufficient_scope` — APIキーにエンドポイントが必要とするスコープがない
+- `license_required` — テナントの契約でそのエンドポイントを利用できない（Open APIが無効、またはFreeプランで reports／webhooks を呼び出した）
+
+```json license_required
+{
+  "error": {
+    "code": "license_required",
+    "message": "Your account does not have the required license to access this feature.",
+    "details": null
+  }
+}
+```
+
+## Webhookの1日あたり送信上限
+
+<AccordionGroup>
+  <Accordion title="カウント単位" icon="hashtag">
+    発生したイベント1件につき1カウントです。同じイベントを購読しているWebhookが複数あっても1カウントです。
+  </Accordion>
+
+  <Accordion title="上限到達後" icon="ban">
+    その日の残りの時間に発生したイベントは配信されません。エラーは返らず、再試行や翌日の再送もなく、配信ログにも残りません。翌日0時（Asia/Tokyo）にリセットされ、それ以降に発生したイベントから配信が再開します。
+  </Accordion>
+
+  <Accordion title="接続テスト" icon="plug">
+    `POST /api/v1/webhooks/{webhookId}/test` はWebhook送信数にカウントされず、上限到達後も実行できます（APIリクエストとしては1日あたりの上限にカウントされます）。
+  </Accordion>
+
+  <Accordion title="確認方法" icon="chart-line">
+    当日の送信数と上限は「API使用状況」画面で確認できます。
+  </Accordion>
+</AccordionGroup>
+
+## Webhookのリクエストヘッダー
+
+実際の配信と `POST /api/v1/webhooks/{webhookId}/test` は同じヘッダーで送信されます。
+
+| ヘッダー | 値 |
+| --- | --- |
+| `Content-Type` | `application/json` |
+| `X-Comdesk-Signature` | `sha256=<hex>`（[Webhook署名の検証](#webhook署名の検証)参照） |
+| `X-Comdesk-Event` | イベント名。`event` プロパティと同じ値（テストは `webhook.test`） |
+| `X-Comdesk-Delivery` | この配信のUUID。イベント×Webhookごとに一意で、再送でも変わりません。重複判定に使ってください。`event_id` プロパティはイベントのIDで、同じイベントを購読するすべてのWebhookで共通です |
+| `User-Agent` | `Comdesk-Webhook/1.0` |
+
+<Warning>
+  **送信元IPは固定ではありません。** 接続テストと実際の配信で送信元IPが異なる場合があります。IPアドレスによる制限は使わず、`X-Comdesk-Signature` で検証してください。
+</Warning>
+
+## Webhook署名の検証
+
+Webhook配信（`POST /api/v1/webhooks/{webhookId}/test` を含む）には `X-Comdesk-Signature: sha256=<hex>` ヘッダーが付与されます。
+
+<Steps>
+  <Step title="鍵">
+    Webhook登録時のレスポンス `data.secret` の値をそのまま使います。`whsec_` 接頭辞を含めた文字列全体が鍵です（接頭辞を外すと検証に失敗します）。
+  </Step>
+  <Step title="署名対象">
+    受信したHTTPリクエストボディの**生のバイト列**。パースしたJSONを再シリアライズすると、キー順・空白・エスケープ（例: `\/`）が変わり、検証に失敗します。
+  </Step>
+  <Step title="アルゴリズム">
+    HMAC-SHA256、16進小文字。ヘッダー値は `sha256=` の後ろに続きます。比較はタイミング攻撃を防ぐため定数時間比較で行ってください。
+  </Step>
+</Steps>
+
+```php PHP
+$expected = 'sha256=' . hash_hmac('sha256', file_get_contents('php://input'), 'whsec_xxxxxxxx');
+$valid = hash_equals($expected, $_SERVER['HTTP_X_COMDESK_SIGNATURE'] ?? '');
+```
