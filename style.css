@@ -10,3 +10,24 @@
 #assistant-entry-mobile {
   margin-left: auto !important;
 }
+
+/* ダウンロードボタン（<a className="download-button" href="...">） */
+a.download-button {
+  display: inline-block;
+  padding: 0.7rem 1.4rem;
+  border-radius: 0.5rem;
+  border: none !important;
+  background-color: #0097a7;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  line-height: 1.4;
+  text-decoration: none !important;
+  transition: background-color 0.15s ease;
+}
+a.download-button:hover,
+a.download-button:focus-visible {
+  background-color: #00838f;
+}
+a.download-button::after {
+  display: none !important;
+}
