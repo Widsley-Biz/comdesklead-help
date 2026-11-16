@@ -11,6 +11,11 @@
     "dark": "/logo.png"
   },
   "favicon": "/favicon.ico",
+  "thumbnails": {
+    "fonts": {
+      "family": "Noto Sans JP"
+    }
+  },
   "navigation": {
     "tabs": [
       {
