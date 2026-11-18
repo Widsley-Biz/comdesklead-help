@@ -257,7 +257,6 @@
               {
                 "group": "リリースノート",
                 "pages": [
-                  "release/notes/2026-12-23-appointment-kpi-status",
                   "release/notes/2026-11-11-release-notes",
                   "release/notes/2026-09-30-release-notes",
                   "release/notes/2026-09-09-release-notes",
@@ -274,6 +273,7 @@
               {
                 "group": "Widsley News",
                 "pages": [
+                  "release/notes/2026-12-23-appointment-kpi-status",
                   "release/news/2026-11-10-security-suspension-notice",
                   "release/news/2026-10-22-maintenance-extension",
                   "release/news/2026-10-21-emergency-maintenance",
