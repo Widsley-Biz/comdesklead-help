@@ -158,6 +158,8 @@
               { id: 14843373880729, value: 'add' },
               { id: 14843482847897, value: 'situation_check' },
               { id: 14843650824985, value: location },
+              // Flat顧客用の該当箇所。Zendesk側で条件付きフィールドが無効のため全送信で必須扱いになる → 「その他」で埋める
+              { id: 14902763198233, value: 'others' },
             ]
           }
         })
